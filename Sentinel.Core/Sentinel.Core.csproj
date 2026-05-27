@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <!-- Sentinel.Core holds domain entities, enums and pure business rules.
+       It deliberately has no external dependencies so it can be unit-tested
+       without a web server or a database. -->
+
+</Project>

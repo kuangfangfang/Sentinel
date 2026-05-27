@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-slate-50 text-slate-800 antialiased;
+  }
+  /* Always show a clear focus ring for keyboard users (WCAG 2.1 AA, FR-39). */
+  :focus-visible {
+    @apply outline-none ring-2 ring-accent-600 ring-offset-2 ring-offset-white rounded;
+  }
+  h1, h2, h3 {
+    @apply text-navy-900 font-semibold tracking-tight;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold
+           transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-accent-600 text-white hover:bg-accent-700;
+  }
+  .btn-secondary {
+    @apply btn bg-white text-navy-800 border border-slate-300 hover:bg-slate-100;
+  }
+  .btn-ghost {
+    @apply btn text-navy-700 hover:bg-slate-100;
+  }
+  .btn-danger {
+    @apply btn bg-red-600 text-white hover:bg-red-700;
+  }
+  /* Inactive "locked" action: dark instead of coloured until a prerequisite is
+     met (e.g. accepting the privacy notice). Still clickable, so a click can
+     surface the validation message that explains what's still needed. */
+  .btn-locked {
+    @apply btn bg-slate-300 text-slate-600 cursor-not-allowed hover:bg-slate-300;
+  }
+
+  .input {
+    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-slate-900
+           placeholder:text-slate-400 focus:border-accent-500;
+  }
+  .label {
+    @apply block text-sm font-medium text-navy-800 mb-1;
+  }
+  .help {
+    @apply mt-1 text-sm text-slate-500;
+  }
+  .error-text {
+    @apply mt-1 text-sm text-red-700;
+  }
+
+  .card {
+    @apply rounded-xl border border-slate-200 bg-white shadow-sm;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+  .container-page {
+    @apply mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8;
+  }
+}
