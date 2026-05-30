@@ -1,7 +1,20 @@
+import { useState } from 'react';
 import type { StepProps } from '../wizardTypes';
 import type { OnBehalfOfDto, RepresentativeDto } from '../../../types';
+import Combobox from '../../../components/Combobox';
+import { OTHER_LANGUAGE_VALUE, preferredLanguageOptions } from '../../../data/languages';
+
+const knownPreferredLanguages = new Set(
+  preferredLanguageOptions
+    .filter((option) => option.value !== OTHER_LANGUAGE_VALUE)
+    .map((option) => option.value),
+);
 
 export function StepAboutYou({ form, update }: StepProps) {
+  const [specifyingOtherLanguage, setSpecifyingOtherLanguage] = useState(
+    Boolean(form.preferredLanguage.trim()) && !knownPreferredLanguages.has(form.preferredLanguage),
+  );
+
   function toggleOnBehalf(on: boolean) {
     update({
       onBehalfOf: on
@@ -23,6 +36,21 @@ export function StepAboutYou({ form, update }: StepProps) {
     update({ representative: { ...(form.representative as RepresentativeDto), ...patch } });
   }
 
+  function setPreferredLanguage(value: string | null) {
+    if (value === OTHER_LANGUAGE_VALUE) {
+      setSpecifyingOtherLanguage(true);
+      update({ preferredLanguage: '' });
+      return;
+    }
+
+    setSpecifyingOtherLanguage(false);
+    update({ preferredLanguage: value ?? '' });
+  }
+
+  const selectedLanguageValue = specifyingOtherLanguage
+    ? OTHER_LANGUAGE_VALUE
+    : form.preferredLanguage || null;
+
   return (
     <div className="space-y-6">
       <div>
@@ -42,8 +70,27 @@ export function StepAboutYou({ form, update }: StepProps) {
         {form.interpreterRequired && (
           <div>
             <label htmlFor="lang" className="label">Preferred language</label>
-            <input id="lang" className="input max-w-sm" value={form.preferredLanguage}
-              onChange={(e) => update({ preferredLanguage: e.target.value })} placeholder="e.g. Vietnamese" />
+            <div className="max-w-sm">
+              <Combobox
+                id="lang"
+                options={preferredLanguageOptions}
+                value={selectedLanguageValue}
+                onChange={setPreferredLanguage}
+                placeholder="Search preferred language"
+                noOptionsMessage="No languages"
+              />
+            </div>
+            {specifyingOtherLanguage && (
+              <div className="mt-3 max-w-sm">
+                <label htmlFor="lang-other" className="label">Please specify language</label>
+                <input
+                  id="lang-other"
+                  className="input"
+                  value={form.preferredLanguage}
+                  onChange={(e) => update({ preferredLanguage: e.target.value })}
+                />
+              </div>
+            )}
           </div>
         )}
       </fieldset>
