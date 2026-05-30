@@ -12,6 +12,7 @@ import { StepRespondents } from './steps/StepRespondents';
 import { StepWhatHappened } from './steps/StepWhatHappened';
 import { StepSupporting } from './steps/StepSupporting';
 import { StepReview } from './steps/StepReview';
+import { validateAbnAcn } from './respondentIdentity';
 
 export function WizardPage() {
   const { draftId: draftIdParam } = useParams();
@@ -64,6 +65,12 @@ export function WizardPage() {
     if (target === 2) {
       if (!form.respondents.some((r) => r.name.trim()))
         e.push('Add at least one person or organisation the complaint is about.');
+      form.respondents.forEach((respondent, index) => {
+        if (respondent.partyType !== 'organisation' || !respondent.abnAcn?.trim()) return;
+        const result = validateAbnAcn(respondent.abnAcn);
+        if (result.kind === 'invalid' || result.kind === 'incomplete')
+          e.push(`Respondent ${index + 1}: ${result.message}`);
+      });
     }
     if (target === 3) {
       if (form.title.trim().length < 5) e.push('Give your complaint a short title (at least 5 characters).');
@@ -71,7 +78,7 @@ export function WizardPage() {
       if (form.description.trim().length < 20) e.push('Describe what happened in at least 20 characters.');
       if (!form.incidentDate) e.push('Enter the date the event happened.');
       else if (form.incidentDate > new Date().toISOString().slice(0, 10)) e.push('The incident date cannot be in the future.');
-      if (!form.incidentLocation.trim()) e.push('Enter where it happened.');
+      if (!form.incidentLocation.trim()) e.push('Enter where exactly it happened.');
     }
     if (target === 5) {
       if (form.genAiUsed === null) e.push('Please answer whether generative AI was used to prepare this complaint.');

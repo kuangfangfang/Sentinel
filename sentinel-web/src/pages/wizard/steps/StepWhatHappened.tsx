@@ -112,9 +112,10 @@ export function StepWhatHappened({ form, update, groundsCatalog }: Props) {
             }} />
         </div>
         <div>
-          <label htmlFor="incidentLocation" className="label">Where did it happen?</label>
+          <label htmlFor="incidentLocation" className="label">Where exactly did it happen?</label>
           <input id="incidentLocation" className="input" value={form.incidentLocation}
-            onChange={(e) => update({ incidentLocation: e.target.value })} placeholder="Suburb, State" />
+            onChange={(e) => update({ incidentLocation: e.target.value })} placeholder="e.g. Café name, street address or landmark, Suburb, State" />
+          <p className="help">Give a specific location such as a venue name, street address or landmark.</p>
         </div>
       </div>
 
