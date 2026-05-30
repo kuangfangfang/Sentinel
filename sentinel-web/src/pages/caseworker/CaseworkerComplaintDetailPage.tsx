@@ -110,7 +110,7 @@ export function CaseworkerComplaintDetailPage() {
                 <dd className="whitespace-pre-wrap">{c.description}</dd></div>
               <div className="grid grid-cols-2 gap-3">
                 <div><dt className="font-medium text-slate-500">When</dt><dd>{formatDateOnly(c.incidentDate)}</dd></div>
-                <div><dt className="font-medium text-slate-500">Where</dt><dd>{c.incidentLocation}</dd></div>
+                <div><dt className="font-medium text-slate-500">Where exactly</dt><dd>{c.incidentLocation}</dd></div>
               </div>
               {c.desiredOutcome && <div><dt className="font-medium text-slate-500">Desired outcome</dt><dd>{c.desiredOutcome}</dd></div>}
               {c.interpreterRequired && <div><dt className="font-medium text-slate-500">Interpreter</dt><dd>Yes — {c.preferredLanguage || 'language not specified'}</dd></div>}

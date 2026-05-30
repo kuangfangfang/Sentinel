@@ -61,7 +61,7 @@ export function ComplaintDetailPage() {
             <dd className="whitespace-pre-wrap">{complaint.description}</dd></div>
           <div className="grid grid-cols-2 gap-3">
             <div><dt className="font-medium text-slate-500">When</dt><dd>{formatDateOnly(complaint.incidentDate)}</dd></div>
-            <div><dt className="font-medium text-slate-500">Where</dt><dd>{complaint.incidentLocation}</dd></div>
+            <div><dt className="font-medium text-slate-500">Where exactly</dt><dd>{complaint.incidentLocation}</dd></div>
           </div>
           {complaint.desiredOutcome && (
             <div><dt className="font-medium text-slate-500">Desired outcome</dt><dd>{complaint.desiredOutcome}</dd></div>

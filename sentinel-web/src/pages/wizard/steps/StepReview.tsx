@@ -35,7 +35,7 @@ export function StepReview({ form, update, groundsCatalog }: Props) {
         {form.delayReason.trim().length > 0 && (
           <Row label="Reason for delay" value={<span className="whitespace-pre-wrap">{form.delayReason}</span>} />
         )}
-        <Row label="Where" value={form.incidentLocation} />
+        <Row label="Where exactly" value={form.incidentLocation} />
         <Row label="Respondents" value={form.respondents.filter((r) => r.name.trim()).map((r) => r.name).join(', ')} />
         <Row label="Desired outcome" value={form.desiredOutcome} />
         {form.interpreterRequired && <Row label="Interpreter" value={`Yes — ${form.preferredLanguage || 'language not specified'}`} />}

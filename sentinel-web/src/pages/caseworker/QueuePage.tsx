@@ -109,7 +109,7 @@ export function QueuePage() {
                 <table className="min-w-full divide-y divide-slate-200">
                   <thead className="bg-slate-50">
                     <tr>
-                      {['Reference', 'Title', 'Status', 'Severity', 'Location', 'Lodged', ''].map((h) => (
+                      {['Reference', 'Title', 'Status', 'Severity', 'Location (exact)', 'Lodged', ''].map((h) => (
                         <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{h}</th>
                       ))}
                     </tr>
