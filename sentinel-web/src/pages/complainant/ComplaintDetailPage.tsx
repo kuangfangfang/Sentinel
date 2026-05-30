@@ -66,6 +66,24 @@ export function ComplaintDetailPage() {
           {complaint.desiredOutcome && (
             <div><dt className="font-medium text-slate-500">Desired outcome</dt><dd>{complaint.desiredOutcome}</dd></div>
           )}
+          {complaint.priorComplaintMade !== null && complaint.priorComplaintMade !== undefined && (
+            <div>
+              <dt className="font-medium text-slate-500">Complaint to another organisation</dt>
+              <dd>{complaint.priorComplaintMade ? 'Yes' : 'No'}</dd>
+            </div>
+          )}
+          {complaint.priorComplaintMade && (
+            <div>
+              <dt className="font-medium text-slate-500">Other complaint details</dt>
+              <dd className="space-y-1">
+                {complaint.priorComplaintAgency && <p>Agency: {complaint.priorComplaintAgency}</p>}
+                {complaint.priorComplaintDate && <p>Date made: {formatDateOnly(complaint.priorComplaintDate)}</p>}
+                {complaint.priorComplaintStatus && <p>Status: {complaint.priorComplaintStatus}</p>}
+                {complaint.priorComplaintFinalisedDate && <p>Finalised: {formatDateOnly(complaint.priorComplaintFinalisedDate)}</p>}
+                {complaint.priorComplaintOutcome && <p className="whitespace-pre-wrap">Outcome: {complaint.priorComplaintOutcome}</p>}
+              </dd>
+            </div>
+          )}
           <div><dt className="font-medium text-slate-500">Respondents</dt>
             <dd>{complaint.respondents.map((r) => r.name).join(', ') || '—'}</dd></div>
         </dl>

@@ -38,6 +38,18 @@ export function StepReview({ form, update, groundsCatalog }: Props) {
         <Row label="Where exactly" value={form.incidentLocation} />
         <Row label="Respondents" value={form.respondents.filter((r) => r.name.trim()).map((r) => r.name).join(', ')} />
         <Row label="Desired outcome" value={form.desiredOutcome} />
+        {form.priorComplaintMade !== null && (
+          <Row label="Complaint elsewhere" value={form.priorComplaintMade ? 'Yes' : 'No'} />
+        )}
+        {form.priorComplaintMade === true && (
+          <>
+            <Row label="Other agency" value={form.priorComplaintAgency} />
+            <Row label="Other complaint date" value={formatDateOnly(form.priorComplaintDate || null)} />
+            <Row label="Other complaint status" value={form.priorComplaintStatus} />
+            <Row label="Finalised date" value={formatDateOnly(form.priorComplaintFinalisedDate || null)} />
+            <Row label="Other complaint outcome" value={<span className="whitespace-pre-wrap">{form.priorComplaintOutcome}</span>} />
+          </>
+        )}
         {form.interpreterRequired && <Row label="Interpreter" value={`Yes — ${form.preferredLanguage || 'language not specified'}`} />}
         {form.onBehalfOf && <Row label="On behalf of" value={`${form.onBehalfOf.firstName} ${form.onBehalfOf.lastName}`} />}
       </dl>

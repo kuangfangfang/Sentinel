@@ -274,6 +274,12 @@ public class ComplaintService
         complaint.IncidentLocation = dto.IncidentLocation;
         complaint.DesiredOutcome = dto.DesiredOutcome;
         complaint.ReferringOrganisation = dto.ReferringOrganisation;
+        complaint.PriorComplaintMade = dto.PriorComplaintMade;
+        complaint.PriorComplaintAgency = dto.PriorComplaintMade == true ? dto.PriorComplaintAgency : null;
+        complaint.PriorComplaintDate = dto.PriorComplaintMade == true ? dto.PriorComplaintDate : null;
+        complaint.PriorComplaintStatus = dto.PriorComplaintMade == true ? dto.PriorComplaintStatus : null;
+        complaint.PriorComplaintFinalisedDate = dto.PriorComplaintMade == true ? dto.PriorComplaintFinalisedDate : null;
+        complaint.PriorComplaintOutcome = dto.PriorComplaintMade == true ? dto.PriorComplaintOutcome : null;
         complaint.DelayReason = dto.DelayReason;
         complaint.InterpreterRequired = dto.InterpreterRequired;
         complaint.PreferredLanguage = dto.PreferredLanguage;

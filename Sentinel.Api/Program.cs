@@ -143,6 +143,7 @@ try
     builder.Services.AddHttpContextAccessor();
     var fileOptions = configuration.GetSection("FileStorage").Get<FileStorageOptions>() ?? new FileStorageOptions();
     builder.Services.AddSingleton(fileOptions);
+    builder.Services.Configure<AbrLookupOptions>(configuration.GetSection("AbrLookup"));
 
     builder.Services.AddSingleton<IReferenceCodeGenerator, ReferenceCodeGenerator>();
     builder.Services.AddSingleton<IStatusTransitionService, StatusTransitionService>();
@@ -150,6 +151,7 @@ try
     builder.Services.AddSingleton<IVirusScanner, StubVirusScanner>();
     builder.Services.AddSingleton<IFileStorageService, LocalFileStorageService>();
     builder.Services.AddSingleton<ITokenService, JwtTokenService>();
+    builder.Services.AddHttpClient<AbrLookupService>();
     builder.Services.AddScoped<ICurrentUser, CurrentUser>();
     builder.Services.AddScoped<IAuditService, AuditService>();
     builder.Services.AddScoped<ComplaintService>();

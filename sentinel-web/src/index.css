@@ -59,6 +59,37 @@
   .card {
     @apply rounded-xl border border-slate-200 bg-white shadow-sm;
   }
+  /* react-datepicker Tailwind overrides to match app styles */
+  .datepicker-error {
+    @apply border-red-600 ring-1 ring-red-600;
+  }
+  .react-datepicker {
+    @apply bg-white rounded-lg border border-slate-200 shadow-lg p-2 text-sm;
+  }
+  .react-datepicker__triangle {
+    display: none;
+  }
+  .react-datepicker__header {
+    @apply flex items-center justify-between px-3 py-2 border-b border-slate-100;
+  }
+  .react-datepicker__current-month {
+    @apply text-sm font-medium text-slate-800;
+  }
+  .react-datepicker__navigation {
+    @apply bg-transparent border-0 text-slate-600;
+  }
+  .react-datepicker__day {
+    @apply w-9 h-9 inline-flex items-center justify-center rounded hover:bg-slate-100;
+  }
+  .react-datepicker__day--selected {
+    @apply bg-accent-600 text-white;
+  }
+  .react-datepicker__day--keyboard-selected {
+    @apply ring-2 ring-accent-500;
+  }
+  .react-datepicker__day--disabled {
+    @apply text-slate-300 cursor-not-allowed;
+  }
   .badge {
     @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium;
   }

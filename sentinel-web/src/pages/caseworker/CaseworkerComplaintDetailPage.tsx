@@ -113,6 +113,24 @@ export function CaseworkerComplaintDetailPage() {
                 <div><dt className="font-medium text-slate-500">Where exactly</dt><dd>{c.incidentLocation}</dd></div>
               </div>
               {c.desiredOutcome && <div><dt className="font-medium text-slate-500">Desired outcome</dt><dd>{c.desiredOutcome}</dd></div>}
+              {c.priorComplaintMade !== null && c.priorComplaintMade !== undefined && (
+                <div>
+                  <dt className="font-medium text-slate-500">Complaint to another organisation</dt>
+                  <dd>{c.priorComplaintMade ? 'Yes' : 'No'}</dd>
+                </div>
+              )}
+              {c.priorComplaintMade && (
+                <div className="rounded-lg bg-slate-50 p-3">
+                  <dt className="font-medium text-slate-500">Other complaint details</dt>
+                  <dd className="mt-1 space-y-1">
+                    {c.priorComplaintAgency && <p>Agency: {c.priorComplaintAgency}</p>}
+                    {c.priorComplaintDate && <p>Date made: {formatDateOnly(c.priorComplaintDate)}</p>}
+                    {c.priorComplaintStatus && <p>Status: {c.priorComplaintStatus}</p>}
+                    {c.priorComplaintFinalisedDate && <p>Finalised: {formatDateOnly(c.priorComplaintFinalisedDate)}</p>}
+                    {c.priorComplaintOutcome && <p className="whitespace-pre-wrap">Outcome: {c.priorComplaintOutcome}</p>}
+                  </dd>
+                </div>
+              )}
               {c.interpreterRequired && <div><dt className="font-medium text-slate-500">Interpreter</dt><dd>Yes — {c.preferredLanguage || 'language not specified'}</dd></div>}
               <div><dt className="font-medium text-slate-500">GenAI used</dt><dd>{c.genAiUsed === null ? '—' : c.genAiUsed ? 'Yes' : 'No'}</dd></div>
             </dl>

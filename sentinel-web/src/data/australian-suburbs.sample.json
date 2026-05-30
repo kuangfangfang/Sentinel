@@ -1,0 +1,10 @@
+[
+  { "suburb": "Melbourne", "state": "Victoria", "postcode": "3000" },
+  { "suburb": "Sydney", "state": "New South Wales", "postcode": "2000" },
+  { "suburb": "Brisbane", "state": "Queensland", "postcode": "4000" },
+  { "suburb": "Adelaide", "state": "South Australia", "postcode": "5000" },
+  { "suburb": "Perth", "state": "Western Australia", "postcode": "6000" },
+  { "suburb": "Hobart", "state": "Tasmania", "postcode": "7000" },
+  { "suburb": "Darwin", "state": "Northern Territory", "postcode": "0800" },
+  { "suburb": "Canberra", "state": "Australian Capital Territory", "postcode": "2600" }
+]

@@ -14,7 +14,13 @@ namespace Sentinel.Api.Controllers;
 public class ComplaintsController : ControllerBase
 {
     private readonly ComplaintService _service;
-    public ComplaintsController(ComplaintService service) => _service = service;
+    private readonly AbrLookupService _abrLookup;
+
+    public ComplaintsController(ComplaintService service, AbrLookupService abrLookup)
+    {
+        _service = service;
+        _abrLookup = abrLookup;
+    }
 
     /// <summary>The catalogue of AHRC grounds for the wizard's selection step (FR-17). Public.</summary>
     [HttpGet("grounds")]
@@ -22,6 +28,19 @@ public class ComplaintsController : ControllerBase
     public ActionResult<IEnumerable<GroundDto>> GetGrounds() =>
         Ok(GroundCatalog.All.Select(g => new GroundDto(
             g.Type, g.Type.ToString(), g.Group, g.Label, g.RequiresDetail, g.DetailPrompt)));
+
+    [HttpGet("abn-lookup")]
+    [AllowAnonymous]
+    public async Task<ActionResult<AbnLookupResultDto>> LookupAbn([FromQuery] string abn, CancellationToken ct)
+    {
+        if (abn.Length != 11 || abn.Any(ch => !char.IsDigit(ch)))
+            throw new AppValidationException(new Dictionary<string, string[]>
+            {
+                ["abn"] = ["ABN must be 11 digits."]
+            });
+
+        return Ok(await _abrLookup.LookupAsync(abn, ct));
+    }
 
     /// <summary>Start a new draft complaint (FR-14).</summary>
     [HttpPost("draft")]

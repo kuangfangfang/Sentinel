@@ -75,6 +75,12 @@ public record ComplaintWriteDto
 
     public string? DesiredOutcome { get; init; }
     public string? ReferringOrganisation { get; init; }
+    public bool? PriorComplaintMade { get; init; }
+    [StringLength(200)] public string? PriorComplaintAgency { get; init; }
+    public DateOnly? PriorComplaintDate { get; init; }
+    [StringLength(120)] public string? PriorComplaintStatus { get; init; }
+    public DateOnly? PriorComplaintFinalisedDate { get; init; }
+    public string? PriorComplaintOutcome { get; init; }
 
     [StringLength(2000)] public string? DelayReason { get; init; }
 
@@ -121,6 +127,12 @@ public record ComplaintDetailDto
     public string IncidentLocation { get; init; } = string.Empty;
     public string? DesiredOutcome { get; init; }
     public string? ReferringOrganisation { get; init; }
+    public bool? PriorComplaintMade { get; init; }
+    public string? PriorComplaintAgency { get; init; }
+    public DateOnly? PriorComplaintDate { get; init; }
+    public string? PriorComplaintStatus { get; init; }
+    public DateOnly? PriorComplaintFinalisedDate { get; init; }
+    public string? PriorComplaintOutcome { get; init; }
     public string? DelayReason { get; init; }
     public ComplaintStatus Status { get; init; }
     public Severity? Severity { get; init; }

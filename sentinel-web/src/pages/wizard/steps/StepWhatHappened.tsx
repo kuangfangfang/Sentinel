@@ -4,6 +4,7 @@ import type { GroundDto } from '../../../types';
 import { InfoTooltip } from '../../../components/InfoTooltip';
 import ReactDatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { parse, isValid, isAfter, format } from 'date-fns';
 
 interface Props extends StepProps {
   groundsCatalog: GroundDto[];
@@ -36,6 +37,42 @@ export function StepWhatHappened({ form, update, groundsCatalog }: Props) {
     (acc[g.group] ??= []).push(g);
     return acc;
   }, {});
+
+  const [dateInput, setDateInput] = useState<string>(() => (form.incidentDate ? format(new Date(`${form.incidentDate}T00:00:00`), 'dd/MM/yyyy') : ''));
+  const [dateError, setDateError] = useState(false);
+
+  useEffect(() => {
+    // keep local input in sync if form value changes externally
+    setDateInput(form.incidentDate ? format(new Date(`${form.incidentDate}T00:00:00`), 'dd/MM/yyyy') : '');
+  }, [form.incidentDate]);
+
+  function applyDateFromDate(d: Date | null) {
+    if (!d) {
+      setDateInput('');
+      setDateError(false);
+      update({ incidentDate: '' });
+      return;
+    }
+    const iso = d.toISOString().slice(0, 10);
+    const longDelay = iso !== '' && new Date(`${iso}T00:00:00`) < delayThreshold;
+    setDateInput(format(d, 'dd/MM/yyyy'));
+    setDateError(false);
+    update(longDelay ? { incidentDate: iso } : { incidentDate: iso, delayReason: '' });
+  }
+
+  function applyDateFromInput(input: string) {
+    // parse dd/MM/yyyy
+    const parsed = parse(input, 'dd/MM/yyyy', new Date());
+    if (!isValid(parsed) || isAfter(parsed, new Date())) {
+      setDateError(true);
+      return;
+    }
+    const iso = parsed.toISOString().slice(0, 10);
+    const longDelay = iso !== '' && new Date(`${iso}T00:00:00`) < delayThreshold;
+    setDateError(false);
+    setDateInput(format(parsed, 'dd/MM/yyyy'));
+    update(longDelay ? { incidentDate: iso } : { incidentDate: iso, delayReason: '' });
+  }
 
   return (
     <div className="space-y-6">
@@ -107,31 +144,36 @@ export function StepWhatHappened({ form, update, groundsCatalog }: Props) {
               </span>
             </InfoTooltip>
           </div>
-          {/* Pop-up calendar: replace native date input with ReactDatePicker */}
+          {/* Pop-up calendar using react-datepicker with manual-entry validation */}
           <ReactDatePicker
             id="incidentDate"
             selected={form.incidentDate ? new Date(`${form.incidentDate}T00:00:00`) : null}
-            onChange={(d: Date | null) => {
-              const value = d ? d.toISOString().slice(0, 10) : '';
-              const longDelay = value !== '' && new Date(`${value}T00:00:00`) < delayThreshold;
-              update(longDelay ? { incidentDate: value } : { incidentDate: value, delayReason: '' });
+            onChange={(d: Date | null) => applyDateFromDate(d)}
+            onChangeRaw={(e: React.ChangeEvent<HTMLInputElement>) => {
+              setDateInput(e.target.value);
+              setDateError(false);
+            }}
+            onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
+              // when the user leaves the input, validate typed content
+              if (!e.target.value) {
+                // empty -> clear
+                applyDateFromDate(null);
+                return;
+              }
+              applyDateFromInput(e.target.value);
             }}
             maxDate={new Date()}
-            dateFormat="yyyy-MM-dd"
-            className="input"
-            placeholderText="Select a date"
+            dateFormat="dd/MM/yyyy"
+            className={`input ${dateError ? 'datepicker-error' : ''}`}
+            placeholderText="dd/MM/yyyy"
             shouldCloseOnSelect
             showPopperArrow={false}
-            showMonthDropdown={false}
-            showYearDropdown={false}
-            renderCustomHeader={({ monthDate, decreaseMonth, increaseMonth, prevMonthButtonDisabled, nextMonthButtonDisabled }) => (
-              <div className="react-datepicker__header flex items-center justify-between px-3 py-2">
-                <button type="button" onClick={decreaseMonth} disabled={prevMonthButtonDisabled} className="btn-ghost">←</button>
-                <div className="text-sm font-medium">{monthDate.toLocaleString(undefined, { month: 'long', year: 'numeric' })}</div>
-                <button type="button" onClick={increaseMonth} disabled={nextMonthButtonDisabled} className="btn-ghost">→</button>
-              </div>
-            )}
+            showMonthDropdown
+            showYearDropdown
+            dropdownMode="select"
+            isClearable
           />
+          {dateError && <p className="help text-red-600">Please enter a valid date (dd/mm/yyyy) on or before today.</p>}
         </div>
         <div>
           <label htmlFor="incidentLocation" className="label">Where exactly did it happen?</label>

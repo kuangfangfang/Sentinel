@@ -26,6 +26,12 @@ public class Complaint
     public string IncidentLocation { get; set; } = string.Empty;
     public string? DesiredOutcome { get; set; }
     public string? ReferringOrganisation { get; set; }
+    public bool? PriorComplaintMade { get; set; }
+    public string? PriorComplaintAgency { get; set; }
+    public DateOnly? PriorComplaintDate { get; set; }
+    public string? PriorComplaintStatus { get; set; }
+    public DateOnly? PriorComplaintFinalisedDate { get; set; }
+    public string? PriorComplaintOutcome { get; set; }
 
     /// <summary>If the event(s) happened more than 24 months ago, the complainant's
     /// explanation for the delay in lodging (AHRC form Part C, "Reason(s) for delay").</summary>

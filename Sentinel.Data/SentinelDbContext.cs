@@ -34,6 +34,8 @@ public class SentinelDbContext : IdentityDbContext<ApplicationUser, IdentityRole
             e.Property(c => c.IncidentLocation).HasMaxLength(200);
             e.Property(c => c.PreferredLanguage).HasMaxLength(60);
             e.Property(c => c.ReferenceCode).HasMaxLength(30);
+            e.Property(c => c.PriorComplaintAgency).HasMaxLength(200);
+            e.Property(c => c.PriorComplaintStatus).HasMaxLength(120);
 
             // Indexes to keep the caseworker queue fast (SRS 5.4, NFR-2).
             e.HasIndex(c => c.Status);

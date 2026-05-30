@@ -1,5 +1,6 @@
 import { apiFetch, getToken } from './client';
 import type {
+  AbnLookupResultDto,
   AttachmentDto,
   ComplaintDetailDto,
   ComplaintListItemDto,
@@ -36,6 +37,9 @@ export const complaintsApi = {
     form.append('file', file);
     return apiFetch<AttachmentDto>(`/complaints/${id}/attachments`, { method: 'POST', body: form });
   },
+
+  lookupAbn: (abn: string, signal?: AbortSignal) =>
+    apiFetch<AbnLookupResultDto>(`/complaints/abn-lookup?abn=${encodeURIComponent(abn)}`, { signal }),
 
   /** Builds an authorised download URL for an attachment (used by an anchor/fetch). */
   attachmentUrl: (id: string, attachmentId: string) =>

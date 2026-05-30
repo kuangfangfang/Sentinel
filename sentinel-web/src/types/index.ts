@@ -96,6 +96,12 @@ export interface ComplaintWriteDto {
   incidentLocation: string;
   desiredOutcome?: string | null;
   referringOrganisation?: string | null;
+  priorComplaintMade?: boolean | null;
+  priorComplaintAgency?: string | null;
+  priorComplaintDate?: string | null;
+  priorComplaintStatus?: string | null;
+  priorComplaintFinalisedDate?: string | null;
+  priorComplaintOutcome?: string | null;
   delayReason?: string | null;
   interpreterRequired: boolean;
   preferredLanguage?: string | null;
@@ -146,6 +152,12 @@ export interface ComplaintDetailDto {
   incidentLocation: string;
   desiredOutcome?: string | null;
   referringOrganisation?: string | null;
+  priorComplaintMade?: boolean | null;
+  priorComplaintAgency?: string | null;
+  priorComplaintDate?: string | null;
+  priorComplaintStatus?: string | null;
+  priorComplaintFinalisedDate?: string | null;
+  priorComplaintOutcome?: string | null;
   delayReason?: string | null;
   status: ComplaintStatus;
   severity?: Severity | null;
@@ -167,6 +179,13 @@ export interface ComplaintDetailDto {
 
 export interface CreateDraftResponse {
   id: string;
+}
+
+export interface AbnLookupResultDto {
+  lookupAvailable: boolean;
+  isVerified: boolean;
+  entityName?: string | null;
+  message?: string | null;
 }
 
 export interface SubmitResultDto {

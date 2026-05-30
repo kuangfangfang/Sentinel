@@ -350,6 +350,26 @@ namespace Sentinel.Data.Migrations
                         .HasMaxLength(60)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("PriorComplaintAgency")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly?>("PriorComplaintDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly?>("PriorComplaintFinalisedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool?>("PriorComplaintMade")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PriorComplaintOutcome")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PriorComplaintStatus")
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("PrivacyNoticeAcceptedAt")
                         .HasColumnType("TEXT");
 
