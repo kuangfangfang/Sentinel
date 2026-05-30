@@ -1,6 +1,9 @@
+import { useEffect, useState } from 'react';
 import type { StepProps } from '../wizardTypes';
 import type { GroundDto } from '../../../types';
 import { InfoTooltip } from '../../../components/InfoTooltip';
+import ReactDatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 
 interface Props extends StepProps {
   groundsCatalog: GroundDto[];
@@ -104,12 +107,31 @@ export function StepWhatHappened({ form, update, groundsCatalog }: Props) {
               </span>
             </InfoTooltip>
           </div>
-          <input id="incidentDate" type="date" className="input" max={today} value={form.incidentDate}
-            onChange={(e) => {
-              const value = e.target.value;
+          {/* Pop-up calendar: replace native date input with ReactDatePicker */}
+          <ReactDatePicker
+            id="incidentDate"
+            selected={form.incidentDate ? new Date(`${form.incidentDate}T00:00:00`) : null}
+            onChange={(d: Date | null) => {
+              const value = d ? d.toISOString().slice(0, 10) : '';
               const longDelay = value !== '' && new Date(`${value}T00:00:00`) < delayThreshold;
               update(longDelay ? { incidentDate: value } : { incidentDate: value, delayReason: '' });
-            }} />
+            }}
+            maxDate={new Date()}
+            dateFormat="yyyy-MM-dd"
+            className="input"
+            placeholderText="Select a date"
+            shouldCloseOnSelect
+            showPopperArrow={false}
+            showMonthDropdown={false}
+            showYearDropdown={false}
+            renderCustomHeader={({ monthDate, decreaseMonth, increaseMonth, prevMonthButtonDisabled, nextMonthButtonDisabled }) => (
+              <div className="react-datepicker__header flex items-center justify-between px-3 py-2">
+                <button type="button" onClick={decreaseMonth} disabled={prevMonthButtonDisabled} className="btn-ghost">←</button>
+                <div className="text-sm font-medium">{monthDate.toLocaleString(undefined, { month: 'long', year: 'numeric' })}</div>
+                <button type="button" onClick={increaseMonth} disabled={nextMonthButtonDisabled} className="btn-ghost">→</button>
+              </div>
+            )}
+          />
         </div>
         <div>
           <label htmlFor="incidentLocation" className="label">Where exactly did it happen?</label>
