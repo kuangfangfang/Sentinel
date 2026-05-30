@@ -57,10 +57,18 @@ export function StepReview({ form, update, groundsCatalog }: Props) {
       <section className="rounded-lg bg-slate-50 p-4">
         <h3 className="font-semibold text-navy-900">Privacy collection notice</h3>
         <p className="mt-2 text-sm text-slate-600">
-          The information you provide is collected to assess and handle your complaint. It is stored securely and
-          is only accessible to authorised caseworkers. If a complaint proceeds, relevant information may be shared
-          with the party complained about. You can ask to access or correct your information at any time. By
-          continuing you consent to this collection and use of your information.
+          The Australian Human Rights Commission collects and handles personal information in accordance with the
+          Privacy Act 1988 (Cth), the Archives Act 1983 (Cth) and its{' '}
+          <a
+            href="https://humanrights.gov.au/our-work/commission-general/privacy"
+            target="_blank"
+            rel="noreferrer"
+            className="font-semibold text-accent-700 underline decoration-accent-600 decoration-2 underline-offset-4 hover:text-accent-800 hover:decoration-accent-800"
+          >
+            Privacy Policy
+          </a>
+          . The information you provide is collected to assess and handle your complaint. If a complaint proceeds,
+          relevant information may be shared with the party complained about or others involved in handling the complaint.
         </p>
         <label className="mt-3 flex items-start gap-3">
           <input type="checkbox" className="mt-1 h-4 w-4" checked={form.privacyNoticeAccepted}

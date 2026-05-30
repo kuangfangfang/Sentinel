@@ -1,4 +1,5 @@
 using System;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -6,6 +7,8 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Sentinel.Data.Migrations
 {
     /// <inheritdoc />
+    [DbContext(typeof(SentinelDbContext))]
+    [Migration("20260530090000_AddPriorComplaintDetails")]
     public partial class AddPriorComplaintDetails : Migration
     {
         /// <inheritdoc />

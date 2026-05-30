@@ -1,9 +1,12 @@
-import { ChangeEvent, useEffect, useState } from 'react';
+import { ChangeEvent, FocusEvent, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { StepProps } from '../wizardTypes';
 import type { AttachmentDto } from '../../../types';
 import { complaintsApi } from '../../../api/complaints';
 import { ApiError } from '../../../api/client';
+import ReactDatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import { isAfter, isValid, parse } from 'date-fns';
 
 interface Props extends StepProps {
   draftId: string | null;
@@ -14,7 +17,8 @@ export function StepSupporting({ form, update, draftId, isAuthenticated }: Props
   const [attachments, setAttachments] = useState<AttachmentDto[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const today = new Date().toISOString().slice(0, 10);
+  const [priorComplaintDateError, setPriorComplaintDateError] = useState(false);
+  const [priorComplaintFinalisedDateError, setPriorComplaintFinalisedDateError] = useState(false);
 
   useEffect(() => {
     if (!draftId) return;
@@ -46,6 +50,54 @@ export function StepSupporting({ form, update, draftId, isAuthenticated }: Props
       priorComplaintFinalisedDate: value ? form.priorComplaintFinalisedDate : '',
       priorComplaintOutcome: value ? form.priorComplaintOutcome : '',
     });
+  }
+
+  function applyPriorComplaintDate(date: Date | null) {
+    setPriorComplaintDateError(false);
+    update({ priorComplaintDate: date ? toIsoDate(date) : '' });
+  }
+
+  function applyPriorComplaintFinalisedDate(date: Date | null) {
+    setPriorComplaintFinalisedDateError(false);
+    update({ priorComplaintFinalisedDate: date ? toIsoDate(date) : '' });
+  }
+
+  function applyPriorComplaintDateInput(value: string) {
+    const parsed = parseDisplayDate(value);
+    if (!parsed) {
+      setPriorComplaintDateError(true);
+      return;
+    }
+
+    setPriorComplaintDateError(false);
+    update({ priorComplaintDate: toIsoDate(parsed) });
+  }
+
+  function applyPriorComplaintFinalisedDateInput(value: string) {
+    const parsed = parseDisplayDate(value);
+    if (!parsed) {
+      setPriorComplaintFinalisedDateError(true);
+      return;
+    }
+
+    setPriorComplaintFinalisedDateError(false);
+    update({ priorComplaintFinalisedDate: toIsoDate(parsed) });
+  }
+
+  function handlePriorComplaintDateBlur(e: FocusEvent<HTMLInputElement>) {
+    if (!e.target.value) {
+      applyPriorComplaintDate(null);
+      return;
+    }
+    applyPriorComplaintDateInput(e.target.value);
+  }
+
+  function handlePriorComplaintFinalisedDateBlur(e: FocusEvent<HTMLInputElement>) {
+    if (!e.target.value) {
+      applyPriorComplaintFinalisedDate(null);
+      return;
+    }
+    applyPriorComplaintFinalisedDateInput(e.target.value);
   }
 
   return (
@@ -125,35 +177,63 @@ export function StepSupporting({ form, update, draftId, isAuthenticated }: Props
             </div>
             <div>
               <label htmlFor="priorComplaintDate" className="label">Date complaint was made</label>
-              <input
+              <ReactDatePicker
                 id="priorComplaintDate"
-                type="date"
-                className="input"
-                max={today}
-                value={form.priorComplaintDate}
-                onChange={(e) => update({ priorComplaintDate: e.target.value })}
+                selected={form.priorComplaintDate ? new Date(`${form.priorComplaintDate}T00:00:00`) : null}
+                onChange={(date: Date | null) => applyPriorComplaintDate(date)}
+                onChangeRaw={(e: ChangeEvent<HTMLInputElement>) => {
+                  setPriorComplaintDateError(false);
+                }}
+                onBlur={handlePriorComplaintDateBlur}
+                maxDate={new Date()}
+                dateFormat="dd/MM/yyyy"
+                className={`input ${priorComplaintDateError ? 'datepicker-error' : ''}`}
+                placeholderText="dd/MM/yyyy"
+                shouldCloseOnSelect
+                showPopperArrow={false}
+                showMonthDropdown
+                showYearDropdown
+                dropdownMode="select"
+                isClearable
               />
+              {priorComplaintDateError && <p className="help text-red-600">Please enter a valid date (dd/mm/yyyy) on or before today.</p>}
             </div>
             <div>
               <label htmlFor="priorComplaintStatus" className="label">Status of complaint</label>
-              <input
+              <select
                 id="priorComplaintStatus"
                 className="input"
                 value={form.priorComplaintStatus}
                 onChange={(e) => update({ priorComplaintStatus: e.target.value })}
-                placeholder="e.g. In progress, finalised, withdrawn"
-              />
+              >
+                <option value="">Select status</option>
+                <option value="In progress">In progress</option>
+                <option value="Finalised">Finalised</option>
+                <option value="Withdrawn">Withdrawn</option>
+              </select>
             </div>
             <div>
               <label htmlFor="priorComplaintFinalisedDate" className="label">Date complaint was finalised (optional)</label>
-              <input
+              <ReactDatePicker
                 id="priorComplaintFinalisedDate"
-                type="date"
-                className="input"
-                max={today}
-                value={form.priorComplaintFinalisedDate}
-                onChange={(e) => update({ priorComplaintFinalisedDate: e.target.value })}
+                selected={form.priorComplaintFinalisedDate ? new Date(`${form.priorComplaintFinalisedDate}T00:00:00`) : null}
+                onChange={(date: Date | null) => applyPriorComplaintFinalisedDate(date)}
+                onChangeRaw={(e: ChangeEvent<HTMLInputElement>) => {
+                  setPriorComplaintFinalisedDateError(false);
+                }}
+                onBlur={handlePriorComplaintFinalisedDateBlur}
+                maxDate={new Date()}
+                dateFormat="dd/MM/yyyy"
+                className={`input ${priorComplaintFinalisedDateError ? 'datepicker-error' : ''}`}
+                placeholderText="dd/MM/yyyy"
+                shouldCloseOnSelect
+                showPopperArrow={false}
+                showMonthDropdown
+                showYearDropdown
+                dropdownMode="select"
+                isClearable
               />
+              {priorComplaintFinalisedDateError && <p className="help text-red-600">Please enter a valid date (dd/mm/yyyy) on or before today.</p>}
             </div>
             <div className="sm:col-span-2">
               <label htmlFor="priorComplaintOutcome" className="label">Outcome of complaint (optional)</label>
@@ -176,4 +256,13 @@ export function StepSupporting({ form, update, draftId, isAuthenticated }: Props
       </div>
     </div>
   );
+}
+
+function toIsoDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+function parseDisplayDate(value: string): Date | null {
+  const parsed = parse(value, 'dd/MM/yyyy', new Date());
+  return isValid(parsed) && !isAfter(parsed, new Date()) ? parsed : null;
 }
