@@ -52,11 +52,26 @@ export interface RespondentDto {
   abnAcn?: string | null;
   contactEmail?: string | null;
   contactPhone?: string | null;
+  mobile?: string | null;
   addressLine?: string | null;
   suburb?: string | null;
   state?: string | null;
   postcode?: string | null;
   relationshipToComplainant?: string | null;
+}
+
+export interface ComplainantContactDto {
+  title?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  addressLine?: string | null;
+  suburb?: string | null;
+  state?: string | null;
+  postcode?: string | null;
+  email?: string | null;
+  phoneAh?: string | null;
+  phoneBh?: string | null;
+  assistanceRequired?: string | null;
 }
 
 export interface GroundSelectionDto {
@@ -95,6 +110,7 @@ export interface ComplaintWriteDto {
   incidentDate: string | null; // yyyy-MM-dd
   incidentLocation: string;
   desiredOutcome?: string | null;
+  complainantContact?: ComplainantContactDto | null;
   referringOrganisation?: string | null;
   priorComplaintMade?: boolean | null;
   priorComplaintAgency?: string | null;
@@ -151,6 +167,7 @@ export interface ComplaintDetailDto {
   incidentDate?: string | null;
   incidentLocation: string;
   desiredOutcome?: string | null;
+  complainantContact?: ComplainantContactDto | null;
   referringOrganisation?: string | null;
   priorComplaintMade?: boolean | null;
   priorComplaintAgency?: string | null;

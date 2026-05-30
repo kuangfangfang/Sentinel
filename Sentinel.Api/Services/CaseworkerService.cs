@@ -198,6 +198,7 @@ public class CaseworkerService
     // ----- internals -----
 
     private IQueryable<Complaint> LoadFull() => _db.Complaints
+        .Include(c => c.ComplainantContact)
         .Include(c => c.Respondents)
         .Include(c => c.Grounds)
         .Include(c => c.Attachments)

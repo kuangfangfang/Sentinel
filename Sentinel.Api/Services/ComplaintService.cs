@@ -214,6 +214,7 @@ public class ComplaintService
     // ----- internals -----
 
     private IQueryable<Complaint> LoadWithChildren() => _db.Complaints
+        .Include(c => c.ComplainantContact)
         .Include(c => c.Respondents)
         .Include(c => c.Grounds)
         .Include(c => c.Attachments)
@@ -273,6 +274,7 @@ public class ComplaintService
         complaint.IncidentDate = dto.IncidentDate;
         complaint.IncidentLocation = dto.IncidentLocation;
         complaint.DesiredOutcome = dto.DesiredOutcome;
+        ApplyComplainantContact(complaint, dto.ComplainantContact, finalising);
         complaint.ReferringOrganisation = dto.ReferringOrganisation;
         complaint.PriorComplaintMade = dto.PriorComplaintMade;
         complaint.PriorComplaintAgency = dto.PriorComplaintMade == true ? dto.PriorComplaintAgency : null;
@@ -296,7 +298,7 @@ public class ComplaintService
         complaint.Respondents = dto.Respondents.Select(r => new Respondent
         {
             ComplaintId = complaint.Id,
-            Name = r.Name, AbnAcn = r.AbnAcn, ContactEmail = r.ContactEmail, ContactPhone = r.ContactPhone,
+            Name = r.Name, AbnAcn = r.AbnAcn, ContactEmail = r.ContactEmail, ContactPhone = r.ContactPhone, Mobile = r.Mobile,
             AddressLine = r.AddressLine, Suburb = r.Suburb, State = r.State, Postcode = r.Postcode,
             RelationshipToComplainant = r.RelationshipToComplainant,
         }).ToList();
@@ -330,6 +332,49 @@ public class ComplaintService
             AssistanceRequired = dto.Representative.AssistanceRequired,
         };
         if (complaint.AssistingRepresentative is not null) _db.AssistingRepresentatives.Add(complaint.AssistingRepresentative);
+    }
+
+    private void ApplyComplainantContact(Complaint complaint, ComplainantContactDto? dto, bool finalising)
+    {
+        if (finalising && !complaint.IsAnonymous)
+        {
+            var errors = new Dictionary<string, string[]>();
+            if (string.IsNullOrWhiteSpace(dto?.FirstName))
+                errors["complainantContact.firstName"] = ["Please provide your first name."];
+            if (string.IsNullOrWhiteSpace(dto?.LastName))
+                errors["complainantContact.lastName"] = ["Please provide your last name."];
+            if (string.IsNullOrWhiteSpace(dto?.Email))
+                errors["complainantContact.email"] = ["Please provide your email address."];
+            if (errors.Count > 0) throw new AppValidationException(errors);
+        }
+
+        var hasDetails = dto is not null && new[]
+        {
+            dto.Title, dto.FirstName, dto.LastName, dto.AddressLine, dto.Suburb, dto.State,
+            dto.Postcode, dto.Email, dto.PhoneAh, dto.PhoneBh, dto.AssistanceRequired,
+        }.Any(value => !string.IsNullOrWhiteSpace(value));
+
+        if (complaint.ComplainantContact is not null)
+            _db.ComplainantContacts.Remove(complaint.ComplainantContact);
+
+        complaint.ComplainantContact = hasDetails ? new ComplainantContact
+        {
+            ComplaintId = complaint.Id,
+            Title = dto!.Title,
+            FirstName = dto.FirstName,
+            LastName = dto.LastName,
+            AddressLine = dto.AddressLine,
+            Suburb = dto.Suburb,
+            State = dto.State,
+            Postcode = dto.Postcode,
+            Email = dto.Email,
+            PhoneAh = dto.PhoneAh,
+            PhoneBh = dto.PhoneBh,
+            AssistanceRequired = dto.AssistanceRequired,
+        } : null;
+
+        if (complaint.ComplainantContact is not null)
+            _db.ComplainantContacts.Add(complaint.ComplainantContact);
     }
 
     private static SubmitResultDto ToResult(Complaint c) =>

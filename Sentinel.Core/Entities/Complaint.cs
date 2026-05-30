@@ -62,6 +62,7 @@ public class Complaint
     public ICollection<Attachment> Attachments { get; set; } = new List<Attachment>();
     public ICollection<CaseNote> CaseNotes { get; set; } = new List<CaseNote>();
     public ICollection<StatusHistory> StatusHistory { get; set; } = new List<StatusHistory>();
+    public ComplainantContact? ComplainantContact { get; set; }
     public OnBehalfOfPerson? OnBehalfOfPerson { get; set; }
     public AssistingRepresentative? AssistingRepresentative { get; set; }
 }

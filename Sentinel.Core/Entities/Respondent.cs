@@ -11,6 +11,7 @@ public class Respondent
     public string? AbnAcn { get; set; }
     public string? ContactEmail { get; set; }
     public string? ContactPhone { get; set; }
+    public string? Mobile { get; set; }
     public string? AddressLine { get; set; }
     public string? Suburb { get; set; }
     public string? State { get; set; }

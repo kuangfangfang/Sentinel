@@ -16,7 +16,7 @@ import { validateAbnAcn } from './respondentIdentity';
 
 export function WizardPage() {
   const { draftId: draftIdParam } = useParams();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
 
   const [step, setStep] = useState(1);
@@ -31,6 +31,26 @@ export function WizardPage() {
   useEffect(() => {
     complaintsApi.getGrounds().then(setGrounds).catch(() => setGrounds([]));
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user || draftIdParam) return;
+
+    setForm((prev) => {
+      if (prev.complainantContact.firstName || prev.complainantContact.lastName || prev.complainantContact.email)
+        return prev;
+
+      const parts = user.fullName.trim().split(/\s+/).filter(Boolean);
+      return {
+        ...prev,
+        complainantContact: {
+          ...prev.complainantContact,
+          firstName: parts[0] ?? '',
+          lastName: parts.slice(1).join(' '),
+          email: user.email,
+        },
+      };
+    });
+  }, [draftIdParam, isAuthenticated, user]);
 
   useEffect(() => {
     if (!draftIdParam) return;
@@ -55,6 +75,11 @@ export function WizardPage() {
   function validateStep(target: number): string[] {
     const e: string[] = [];
     if (target === 1) {
+      if (isAuthenticated) {
+        if (!form.complainantContact.firstName?.trim()) e.push('Please provide your first name.');
+        if (!form.complainantContact.lastName?.trim()) e.push('Please provide your last name.');
+        if (!form.complainantContact.email?.trim()) e.push('Please provide your email address.');
+      }
       if (form.onBehalfOf && (!form.onBehalfOf.firstName.trim() || !form.onBehalfOf.lastName.trim()))
         e.push('Please give the first and last name of the person you are complaining for.');
       if (form.representative && (!form.representative.firstName.trim() || !form.representative.lastName.trim()))
@@ -132,7 +157,7 @@ export function WizardPage() {
   }
 
   async function submit() {
-    const allErrors = [...validateStep(2), ...validateStep(3), ...validateStep(5)];
+    const allErrors = [...validateStep(1), ...validateStep(2), ...validateStep(3), ...validateStep(5)];
     setErrors(allErrors);
     if (allErrors.length) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -184,7 +209,7 @@ export function WizardPage() {
       )}
 
       <section className="card p-6" aria-label={`Step ${step}: ${heading}`}>
-        {step === 1 && <StepAboutYou form={form} update={update} errors={errors} />}
+        {step === 1 && <StepAboutYou form={form} update={update} errors={errors} isAuthenticated={isAuthenticated} />}
         {step === 2 && <StepRespondents form={form} update={update} errors={errors} />}
         {step === 3 && <StepWhatHappened form={form} update={update} errors={errors} groundsCatalog={grounds} />}
         {step === 4 && <StepSupporting form={form} update={update} errors={errors} draftId={serverDraftId} isAuthenticated={isAuthenticated} />}

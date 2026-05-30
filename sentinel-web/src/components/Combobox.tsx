@@ -10,6 +10,7 @@ interface ComboboxProps {
   id?: string;
   options: ComboboxOption[];
   value?: string | null;
+  displayValue?: string | null;
   onChange: (value: string | null) => void;
   placeholder?: string;
   disabled?: boolean;
@@ -34,7 +35,7 @@ function useDebouncedValue(value: string, delayMs: number): string {
   return debounced;
 }
 
-export default function Combobox({ id, options, value, onChange, placeholder, disabled, noOptionsMessage }: ComboboxProps) {
+export default function Combobox({ id, options, value, displayValue, onChange, placeholder, disabled, noOptionsMessage }: ComboboxProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
@@ -87,8 +88,8 @@ export default function Combobox({ id, options, value, onChange, placeholder, di
     if (open && value === null) return;
 
     const selected = options.find((option) => option.value === value || option.label === value);
-    setQuery(selected?.label ?? value ?? '');
-  }, [open, options, value]);
+    setQuery(displayValue ?? selected?.label ?? value ?? '');
+  }, [displayValue, open, options, value]);
 
   useEffect(() => {
     if (!open) return;

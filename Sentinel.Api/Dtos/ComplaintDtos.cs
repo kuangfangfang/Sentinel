@@ -14,11 +14,27 @@ public record RespondentDto
     [StringLength(20)] public string? AbnAcn { get; init; }
     [EmailAddress] public string? ContactEmail { get; init; }
     public string? ContactPhone { get; init; }
+    public string? Mobile { get; init; }
     public string? AddressLine { get; init; }
     public string? Suburb { get; init; }
     public string? State { get; init; }
     public string? Postcode { get; init; }
     [StringLength(200)] public string? RelationshipToComplainant { get; init; }
+}
+
+public record ComplainantContactDto
+{
+    [StringLength(40)] public string? Title { get; init; }
+    [StringLength(100)] public string? FirstName { get; init; }
+    [StringLength(100)] public string? LastName { get; init; }
+    public string? AddressLine { get; init; }
+    public string? Suburb { get; init; }
+    public string? State { get; init; }
+    [StringLength(10)] public string? Postcode { get; init; }
+    [EmailAddress] public string? Email { get; init; }
+    public string? PhoneAh { get; init; }
+    public string? PhoneBh { get; init; }
+    public string? AssistanceRequired { get; init; }
 }
 
 public record GroundSelectionDto
@@ -74,6 +90,7 @@ public record ComplaintWriteDto
     public string IncidentLocation { get; init; } = string.Empty;
 
     public string? DesiredOutcome { get; init; }
+    public ComplainantContactDto? ComplainantContact { get; init; }
     public string? ReferringOrganisation { get; init; }
     public bool? PriorComplaintMade { get; init; }
     [StringLength(200)] public string? PriorComplaintAgency { get; init; }
@@ -126,6 +143,7 @@ public record ComplaintDetailDto
     public DateOnly? IncidentDate { get; init; }
     public string IncidentLocation { get; init; } = string.Empty;
     public string? DesiredOutcome { get; init; }
+    public ComplainantContactDto? ComplainantContact { get; init; }
     public string? ReferringOrganisation { get; init; }
     public bool? PriorComplaintMade { get; init; }
     public string? PriorComplaintAgency { get; init; }

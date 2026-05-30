@@ -1,5 +1,6 @@
 import type {
   ComplaintWriteDto,
+  ComplainantContactDto,
   GroundSelectionDto,
   OnBehalfOfDto,
   RepresentativeDto,
@@ -21,6 +22,7 @@ export interface WizardForm {
   incidentDate: string; // yyyy-MM-dd or ''
   incidentLocation: string;
   desiredOutcome: string;
+  complainantContact: ComplainantContactDto;
   referringOrganisation: string;
   priorComplaintMade: boolean | null;
   priorComplaintAgency: string;
@@ -63,6 +65,7 @@ export function newRespondent(overrides: Partial<RespondentDto> = {}, partyType:
     abnAcn: digits || null,
     contactEmail: overrides.contactEmail ?? null,
     contactPhone: overrides.contactPhone ?? null,
+    mobile: overrides.mobile ?? null,
     addressLine: overrides.addressLine ?? null,
     suburb: overrides.suburb ?? null,
     state: normalizeAustralianState(overrides.state),
@@ -78,6 +81,7 @@ export function emptyForm(): WizardForm {
     incidentDate: '',
     incidentLocation: '',
     desiredOutcome: '',
+    complainantContact: emptyComplainantContact(),
     referringOrganisation: '',
     priorComplaintMade: null,
     priorComplaintAgency: '',
@@ -104,6 +108,11 @@ export function fromDetail(d: ComplaintDetailDto): WizardForm {
     incidentDate: d.incidentDate ?? '',
     incidentLocation: d.incidentLocation ?? '',
     desiredOutcome: d.desiredOutcome ?? '',
+    complainantContact: {
+      ...emptyComplainantContact(),
+      ...(d.complainantContact ?? {}),
+      state: normalizeAustralianState(d.complainantContact?.state),
+    },
     referringOrganisation: d.referringOrganisation ?? '',
     priorComplaintMade: d.priorComplaintMade ?? null,
     priorComplaintAgency: d.priorComplaintAgency ?? '',
@@ -130,6 +139,7 @@ export function toWriteDto(form: WizardForm, wizardStep: number): ComplaintWrite
     incidentDate: form.incidentDate ? form.incidentDate : null,
     incidentLocation: form.incidentLocation.trim(),
     desiredOutcome: form.desiredOutcome.trim() || null,
+    complainantContact: trimComplainantContact(form.complainantContact),
     referringOrganisation: form.referringOrganisation.trim() || null,
     priorComplaintMade: form.priorComplaintMade,
     priorComplaintAgency: form.priorComplaintMade === true ? form.priorComplaintAgency.trim() || null : null,
@@ -150,7 +160,41 @@ export function toWriteDto(form: WizardForm, wizardStep: number): ComplaintWrite
         abnAcn: partyType === 'organisation' ? normalizeAbnAcn(respondent.abnAcn ?? '') || null : null,
       })),
     onBehalfOf: form.onBehalfOf,
-    representative: form.representative,
+    representative: form.representative ? { ...form.representative, phoneBh: null } : null,
     wizardStep,
   };
+}
+
+export function emptyComplainantContact(): ComplainantContactDto {
+  return {
+    title: '',
+    firstName: '',
+    lastName: '',
+    addressLine: '',
+    suburb: '',
+    state: '',
+    postcode: '',
+    email: '',
+    phoneAh: '',
+    phoneBh: '',
+    assistanceRequired: '',
+  };
+}
+
+function trimComplainantContact(contact: ComplainantContactDto): ComplainantContactDto | null {
+  const trimmed: ComplainantContactDto = {
+    title: contact.title?.trim() || null,
+    firstName: contact.firstName?.trim() || null,
+    lastName: contact.lastName?.trim() || null,
+    addressLine: contact.addressLine?.trim() || null,
+    suburb: contact.suburb?.trim() || null,
+    state: contact.state?.trim() || null,
+    postcode: contact.postcode?.trim() || null,
+    email: contact.email?.trim() || null,
+    phoneAh: null,
+    phoneBh: contact.phoneBh?.trim() || null,
+    assistanceRequired: contact.assistanceRequired?.trim() || null,
+  };
+
+  return Object.values(trimmed).some(Boolean) ? trimmed : null;
 }

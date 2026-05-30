@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { StepProps } from '../wizardTypes';
-import type { GroundDto } from '../../../types';
+import type { ComplainantContactDto, GroundDto, OnBehalfOfDto, RepresentativeDto, RespondentDto } from '../../../types';
 import { formatDateOnly } from '../../../utils/format';
 import { InfoTooltip } from '../../../components/InfoTooltip';
 
@@ -17,6 +17,102 @@ function Row({ label, value }: { label: string; value: ReactNode }) {
   );
 }
 
+function joinParts(parts: Array<string | null | undefined>): string {
+  return parts.map((part) => part?.trim()).filter(Boolean).join(', ');
+}
+
+function formatName(firstName?: string | null, lastName?: string | null): string {
+  return joinParts([firstName, lastName]);
+}
+
+function formatAddress(value: { addressLine?: string | null; suburb?: string | null; state?: string | null; postcode?: string | null }): string {
+  return joinParts([value.addressLine, value.suburb, value.state, value.postcode]);
+}
+
+function DetailList({ items }: { items: Array<[string, ReactNode]> }) {
+  const visible = items.filter(([, value]) => Boolean(value));
+  if (visible.length === 0) return <span className="text-slate-400">Not provided</span>;
+
+  return (
+    <dl className="space-y-1">
+      {visible.map(([label, value]) => (
+        <div key={label}>
+          <dt className="inline font-medium text-slate-500">{label}: </dt>
+          <dd className="inline">{value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function ComplainantContactSummary({ contact }: { contact: ComplainantContactDto }) {
+  return (
+    <DetailList
+      items={[
+        ['Name', joinParts([contact.title, formatName(contact.firstName, contact.lastName)])],
+        ['Email', contact.email],
+        ['Address', formatAddress(contact)],
+        ['Mobile', contact.phoneBh || contact.phoneAh],
+        ['Assistance', contact.assistanceRequired],
+      ]}
+    />
+  );
+}
+
+function OnBehalfSummary({ person }: { person: OnBehalfOfDto }) {
+  return (
+    <DetailList
+      items={[
+        ['Name', formatName(person.firstName, person.lastName)],
+        ['Email', person.email],
+        ['Relationship', person.relationshipToComplainant],
+        ['Assistance', person.assistanceRequired],
+      ]}
+    />
+  );
+}
+
+function RepresentativeSummary({ representative }: { representative: RepresentativeDto }) {
+  return (
+    <DetailList
+      items={[
+        ['Name', joinParts([representative.title, formatName(representative.firstName, representative.lastName)])],
+        ['Position', representative.position],
+        ['Organisation', representative.organisation],
+        ['Address', formatAddress(representative)],
+        ['Email', representative.email],
+        ['Mobile', representative.mobile],
+        ['Assistance', representative.assistanceRequired],
+      ]}
+    />
+  );
+}
+
+function RespondentsSummary({ respondents }: { respondents: RespondentDto[] }) {
+  const visible = respondents.filter((r) => r.name.trim());
+  if (visible.length === 0) return <span className="text-slate-400">Not provided</span>;
+
+  return (
+    <ul className="space-y-3">
+      {visible.map((respondent, index) => (
+        <li key={`${respondent.name}-${index}`} className="rounded border border-slate-100 p-3">
+          <p className="font-medium text-navy-900">{respondent.name}</p>
+          <DetailList
+            items={[
+              ['ABN / ACN', respondent.abnAcn],
+              ['Relationship', respondent.relationshipToComplainant],
+              ['Address', formatAddress(respondent)],
+              ['Email', respondent.contactEmail],
+              ['Phone (BH)', respondent.contactPhone],
+              ['Mobile', respondent.mobile],
+            ]}
+          />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function StepReview({ form, update, groundsCatalog }: Props) {
   const labelFor = (value: string) => groundsCatalog.find((g) => g.value === value)?.label ?? value;
 
@@ -28,6 +124,10 @@ export function StepReview({ form, update, groundsCatalog }: Props) {
       </div>
 
       <dl className="divide-y divide-slate-100 rounded-lg border border-slate-200 p-4">
+        <Row label="Your contact details" value={<ComplainantContactSummary contact={form.complainantContact} />} />
+        {form.interpreterRequired && <Row label="Interpreter" value={`Yes - ${form.preferredLanguage || 'language not specified'}`} />}
+        {form.onBehalfOf && <Row label="On behalf of" value={<OnBehalfSummary person={form.onBehalfOf} />} />}
+        {form.representative && <Row label="Representative" value={<RepresentativeSummary representative={form.representative} />} />}
         <Row label="Title" value={form.title} />
         <Row label="Grounds" value={form.grounds.map((g) => labelFor(g.groundType)).join(', ')} />
         <Row label="What happened" value={<span className="whitespace-pre-wrap">{form.description}</span>} />
@@ -36,7 +136,7 @@ export function StepReview({ form, update, groundsCatalog }: Props) {
           <Row label="Reason for delay" value={<span className="whitespace-pre-wrap">{form.delayReason}</span>} />
         )}
         <Row label="Where exactly" value={form.incidentLocation} />
-        <Row label="Respondents" value={form.respondents.filter((r) => r.name.trim()).map((r) => r.name).join(', ')} />
+        <Row label="Respondents" value={<RespondentsSummary respondents={form.respondents} />} />
         <Row label="Desired outcome" value={form.desiredOutcome} />
         {form.priorComplaintMade !== null && (
           <Row label="Complaint elsewhere" value={form.priorComplaintMade ? 'Yes' : 'No'} />
@@ -50,8 +150,6 @@ export function StepReview({ form, update, groundsCatalog }: Props) {
             <Row label="Other complaint outcome" value={<span className="whitespace-pre-wrap">{form.priorComplaintOutcome}</span>} />
           </>
         )}
-        {form.interpreterRequired && <Row label="Interpreter" value={`Yes — ${form.preferredLanguage || 'language not specified'}`} />}
-        {form.onBehalfOf && <Row label="On behalf of" value={`${form.onBehalfOf.firstName} ${form.onBehalfOf.lastName}`} />}
       </dl>
 
       <section className="rounded-lg bg-slate-50 p-4">
@@ -71,8 +169,12 @@ export function StepReview({ form, update, groundsCatalog }: Props) {
           relevant information may be shared with the party complained about or others involved in handling the complaint.
         </p>
         <label className="mt-3 flex items-start gap-3">
-          <input type="checkbox" className="mt-1 h-4 w-4" checked={form.privacyNoticeAccepted}
-            onChange={(e) => update({ privacyNoticeAccepted: e.target.checked })} />
+          <input
+            type="checkbox"
+            className="mt-1 h-4 w-4"
+            checked={form.privacyNoticeAccepted}
+            onChange={(e) => update({ privacyNoticeAccepted: e.target.checked })}
+          />
           <span className="text-sm">I have read and understood the privacy collection notice.</span>
         </label>
       </section>
@@ -87,7 +189,7 @@ export function StepReview({ form, update, groundsCatalog }: Props) {
             </span>
             <span className="block">
               If you use GenAI to help write your complaint, you are responsible for making sure it is accurate.
-              GenAI comes with risks — it can create information that is not accurate and, in some cases, wrong.
+              GenAI comes with risks - it can create information that is not accurate and, in some cases, wrong.
             </span>
             <span className="block">
               If you answer <span className="font-semibold text-slate-800">Yes</span>, please read and check all

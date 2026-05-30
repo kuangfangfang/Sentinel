@@ -40,7 +40,26 @@ public class ComplaintServiceTests
         PrivacyNoticeAccepted = true,
         WizardStep = 5,
         Grounds = { new GroundSelectionDto { GroundType = GroundType.Disability, ConditionalDetail = "Vision impairment" } },
-        Respondents = { new RespondentDto { Name = "Example Employer Pty Ltd", RelationshipToComplainant = "Employer" } },
+        Respondents =
+        {
+            new RespondentDto
+            {
+                Name = "Example Employer Pty Ltd",
+                RelationshipToComplainant = "Employer",
+                ContactPhone = "02 9000 0000",
+                Mobile = "0400 000 000",
+            },
+        },
+    };
+
+    private static ComplaintWriteDto ValidRegisteredComplaint() => ValidComplaint() with
+    {
+        ComplainantContact = new ComplainantContactDto
+        {
+            FirstName = "Alex",
+            LastName = "Taylor",
+            Email = "alex.taylor@example.com",
+        },
     };
 
     [Fact]
@@ -100,15 +119,22 @@ public class ComplaintServiceTests
         var service = NewService(db, userId, Sentinel.Core.Roles.Complainant);
 
         var draft = await service.CreateDraftAsync(default);
-        var result = await service.SubmitAsync(draft.Id, ValidComplaint(), default);
+        var result = await service.SubmitAsync(draft.Id, ValidRegisteredComplaint(), default);
 
         result.ReferenceCode.Should().StartWith("SEN-");
         result.Status.Should().Be(ComplaintStatus.Submitted);
 
-        var saved = await db.Complaints.Include(c => c.StatusHistory).FirstAsync(c => c.Id == draft.Id);
+        var saved = await db.Complaints
+            .Include(c => c.ComplainantContact)
+            .Include(c => c.Respondents)
+            .Include(c => c.StatusHistory)
+            .FirstAsync(c => c.Id == draft.Id);
         saved.Status.Should().Be(ComplaintStatus.Submitted);
         saved.SubmittedAt.Should().NotBeNull();
         saved.Severity.Should().NotBeNull(); // triage hint applied
+        saved.ComplainantContact.Should().NotBeNull();
+        saved.ComplainantContact!.Email.Should().Be("alex.taylor@example.com");
+        saved.Respondents.Single().Mobile.Should().Be("0400 000 000");
         saved.StatusHistory.Should().Contain(h =>
             h.FromStatus == ComplaintStatus.Draft && h.ToStatus == ComplaintStatus.Submitted);
     }

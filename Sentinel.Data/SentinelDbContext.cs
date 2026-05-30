@@ -14,6 +14,7 @@ public class SentinelDbContext : IdentityDbContext<ApplicationUser, IdentityRole
     public SentinelDbContext(DbContextOptions<SentinelDbContext> options) : base(options) { }
 
     public DbSet<Complaint> Complaints => Set<Complaint>();
+    public DbSet<ComplainantContact> ComplainantContacts => Set<ComplainantContact>();
     public DbSet<Respondent> Respondents => Set<Respondent>();
     public DbSet<ComplaintGround> ComplaintGrounds => Set<ComplaintGround>();
     public DbSet<OnBehalfOfPerson> OnBehalfOfPersons => Set<OnBehalfOfPerson>();
@@ -54,6 +55,8 @@ public class SentinelDbContext : IdentityDbContext<ApplicationUser, IdentityRole
                 .HasForeignKey(n => n.ComplaintId).OnDelete(DeleteBehavior.Cascade);
             e.HasMany(c => c.StatusHistory).WithOne(s => s.Complaint!)
                 .HasForeignKey(s => s.ComplaintId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(c => c.ComplainantContact).WithOne(cc => cc.Complaint!)
+                .HasForeignKey<ComplainantContact>(cc => cc.ComplaintId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(c => c.OnBehalfOfPerson).WithOne(o => o.Complaint!)
                 .HasForeignKey<OnBehalfOfPerson>(o => o.ComplaintId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(c => c.AssistingRepresentative).WithOne(a => a.Complaint!)
@@ -78,6 +81,16 @@ public class SentinelDbContext : IdentityDbContext<ApplicationUser, IdentityRole
             e.Property(r => r.Name).HasMaxLength(200).IsRequired();
             e.Property(r => r.AbnAcn).HasMaxLength(20);
             e.Property(r => r.RelationshipToComplainant).HasMaxLength(200);
+        });
+
+        b.Entity<ComplainantContact>(e =>
+        {
+            e.Property(c => c.Title).HasMaxLength(40);
+            e.Property(c => c.FirstName).HasMaxLength(100);
+            e.Property(c => c.LastName).HasMaxLength(100);
+            e.Property(c => c.Email).HasMaxLength(256);
+            e.Property(c => c.State).HasMaxLength(80);
+            e.Property(c => c.Postcode).HasMaxLength(10);
         });
 
         b.Entity<ComplaintGround>(e =>

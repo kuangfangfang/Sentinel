@@ -12,11 +12,27 @@ public static class ComplaintMapping
         AbnAcn = r.AbnAcn,
         ContactEmail = r.ContactEmail,
         ContactPhone = r.ContactPhone,
+        Mobile = r.Mobile,
         AddressLine = r.AddressLine,
         Suburb = r.Suburb,
         State = r.State,
         Postcode = r.Postcode,
         RelationshipToComplainant = r.RelationshipToComplainant,
+    };
+
+    public static ComplainantContactDto? ToDto(ComplainantContact? c) => c is null ? null : new ComplainantContactDto
+    {
+        Title = c.Title,
+        FirstName = c.FirstName,
+        LastName = c.LastName,
+        AddressLine = c.AddressLine,
+        Suburb = c.Suburb,
+        State = c.State,
+        Postcode = c.Postcode,
+        Email = c.Email,
+        PhoneAh = c.PhoneAh,
+        PhoneBh = c.PhoneBh,
+        AssistanceRequired = c.AssistanceRequired,
     };
 
     public static GroundSelectionDto ToDto(ComplaintGround g) =>
@@ -63,6 +79,7 @@ public static class ComplaintMapping
         IncidentDate = c.IncidentDate,
         IncidentLocation = c.IncidentLocation,
         DesiredOutcome = c.DesiredOutcome,
+        ComplainantContact = ToDto(c.ComplainantContact),
         ReferringOrganisation = c.ReferringOrganisation,
         PriorComplaintMade = c.PriorComplaintMade,
         PriorComplaintAgency = c.PriorComplaintAgency,

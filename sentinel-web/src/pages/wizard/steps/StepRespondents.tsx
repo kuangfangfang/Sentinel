@@ -205,8 +205,17 @@ function RespondentFieldset({ respondent, index, onPatch, onRemove }: Respondent
             placeholder="e.g. Employer, service provider"
           />
         </div>
+        <div className="sm:col-span-2">
+          <label htmlFor={`r-address-${respondent.uiKey}`} className="label">Address</label>
+          <input
+            id={`r-address-${respondent.uiKey}`}
+            className="input"
+            value={respondent.addressLine ?? ''}
+            onChange={(e) => onPatch({ addressLine: e.target.value })}
+          />
+        </div>
         <div>
-          <label htmlFor={`r-state-${respondent.uiKey}`} className="label">State (optional)</label>
+          <label htmlFor={`r-state-${respondent.uiKey}`} className="label">State/Territory</label>
           <StateCombobox
             id={`r-state-${respondent.uiKey}`}
             respondent={respondent}
@@ -214,11 +223,48 @@ function RespondentFieldset({ respondent, index, onPatch, onRemove }: Respondent
           />
         </div>
         <div>
-          <label htmlFor={`r-suburb-${respondent.uiKey}`} className="label">Suburb (optional)</label>
+          <label htmlFor={`r-suburb-${respondent.uiKey}`} className="label">Suburb</label>
           <SuburbCombobox
             id={`r-suburb-${respondent.uiKey}`}
             respondent={respondent}
             onPatch={(p) => onPatch(p)}
+          />
+        </div>
+        <div>
+          <label htmlFor={`r-postcode-${respondent.uiKey}`} className="label">Postcode</label>
+          <input
+            id={`r-postcode-${respondent.uiKey}`}
+            className="input"
+            value={respondent.postcode ?? ''}
+            onChange={(e) => onPatch({ postcode: e.target.value })}
+          />
+        </div>
+        <div>
+          <label htmlFor={`r-email-${respondent.uiKey}`} className="label">Email</label>
+          <input
+            id={`r-email-${respondent.uiKey}`}
+            type="email"
+            className="input"
+            value={respondent.contactEmail ?? ''}
+            onChange={(e) => onPatch({ contactEmail: e.target.value })}
+          />
+        </div>
+        <div>
+          <label htmlFor={`r-phone-${respondent.uiKey}`} className="label">Phone (BH)</label>
+          <input
+            id={`r-phone-${respondent.uiKey}`}
+            className="input"
+            value={respondent.contactPhone ?? ''}
+            onChange={(e) => onPatch({ contactPhone: e.target.value })}
+          />
+        </div>
+        <div>
+          <label htmlFor={`r-mobile-${respondent.uiKey}`} className="label">Mobile</label>
+          <input
+            id={`r-mobile-${respondent.uiKey}`}
+            className="input"
+            value={respondent.mobile ?? ''}
+            onChange={(e) => onPatch({ mobile: e.target.value })}
           />
         </div>
       </div>
