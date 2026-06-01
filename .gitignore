@@ -29,6 +29,7 @@ uploaded-evidence/
 node_modules/
 dist/
 .vite/
+sentinel-web/.tmp-validation-tests/
 
 # IDE
 .vs/

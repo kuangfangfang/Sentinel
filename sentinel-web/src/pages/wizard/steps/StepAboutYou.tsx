@@ -36,7 +36,7 @@ function titleOptions(current: string | null | undefined): string[] {
 }
 
 function digitsOnly(value: unknown): string {
-  return typeof value === 'string' ? value.replace(/\D/g, '') : '';
+  return typeof value === 'string' ? value.replace(/\D/g, '').slice(0, 10) : '';
 }
 
 function fieldErrorMessage(error: unknown): string | undefined {
@@ -136,6 +136,7 @@ export function StepAboutYou({ isAuthenticated }: Props) {
         pattern="[0-9]*"
         {...repMobile}
         onChange={(e) => {
+          e.target.value = digitsOnly(e.target.value);
           setValue('representative.phoneBh', '', RHF_UPDATE);
           repMobile.onChange(e);
         }}
@@ -201,7 +202,7 @@ export function StepAboutYou({ isAuthenticated }: Props) {
             postcode={form.complainantContact.postcode}
           />
           <div>
-            <label htmlFor="contact-mobile" className="label">Mobile</label>
+            <label htmlFor="contact-mobile" className="label">Mobile{isAuthenticated ? ' (required)' : ''}</label>
             <input
               id="contact-mobile"
               className="input"
@@ -209,6 +210,7 @@ export function StepAboutYou({ isAuthenticated }: Props) {
               pattern="[0-9]*"
               {...contactMobile}
               onChange={(e) => {
+                e.target.value = digitsOnly(e.target.value);
                 setValue('complainantContact.phoneAh', '', RHF_UPDATE);
                 contactMobile.onChange(e);
               }}
@@ -281,33 +283,39 @@ export function StepAboutYou({ isAuthenticated }: Props) {
         {form.onBehalfOf && (
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label htmlFor="ob-first" className="label">Their first name</label>
+              <label htmlFor="ob-first" className="label">Their first name (required)</label>
               <input id="ob-first" className="input" {...register('onBehalfOf.firstName')} />
               {fieldErrorMessage(onBehalfErrors.firstName) && (
                 <p className="error-text">{fieldErrorMessage(onBehalfErrors.firstName)}</p>
               )}
             </div>
             <div>
-              <label htmlFor="ob-last" className="label">Their last name</label>
+              <label htmlFor="ob-last" className="label">Their last name (required)</label>
               <input id="ob-last" className="input" {...register('onBehalfOf.lastName')} />
               {fieldErrorMessage(onBehalfErrors.lastName) && (
                 <p className="error-text">{fieldErrorMessage(onBehalfErrors.lastName)}</p>
               )}
             </div>
             <div>
-              <label htmlFor="ob-email" className="label">Their email</label>
+              <label htmlFor="ob-email" className="label">Their email (required)</label>
               <input id="ob-email" type="email" className="input" {...register('onBehalfOf.email')} />
               {fieldErrorMessage(onBehalfErrors.email) && (
                 <p className="error-text">{fieldErrorMessage(onBehalfErrors.email)}</p>
               )}
             </div>
             <div>
-              <label htmlFor="ob-rel" className="label">Your relationship to them</label>
+              <label htmlFor="ob-rel" className="label">Your relationship to them (required)</label>
               <input id="ob-rel" className="input" {...register('onBehalfOf.relationshipToComplainant')} />
+              {fieldErrorMessage(onBehalfErrors.relationshipToComplainant) && (
+                <p className="error-text">{fieldErrorMessage(onBehalfErrors.relationshipToComplainant)}</p>
+              )}
             </div>
             <div className="sm:col-span-2">
-              <label htmlFor="ob-assist" className="label">Do they need assistance to take part? (optional)</label>
+              <label htmlFor="ob-assist" className="label">Do they need assistance to take part? (required)</label>
               <textarea id="ob-assist" className="input min-h-[80px]" {...register('onBehalfOf.assistanceRequired')} />
+              {fieldErrorMessage(onBehalfErrors.assistanceRequired) && (
+                <p className="error-text">{fieldErrorMessage(onBehalfErrors.assistanceRequired)}</p>
+              )}
             </div>
           </div>
         )}
@@ -328,7 +336,7 @@ export function StepAboutYou({ isAuthenticated }: Props) {
         {form.representative && (
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label htmlFor="rep-title" className="label">Title</label>
+              <label htmlFor="rep-title" className="label">Title (required)</label>
               <select id="rep-title" className="input" {...register('representative.title')}>
                 {titleOptions(form.representative.title).map((title) => (
                   <option key={title || 'blank'} value={title} disabled={!title}>
@@ -336,28 +344,37 @@ export function StepAboutYou({ isAuthenticated }: Props) {
                   </option>
                 ))}
               </select>
+              {fieldErrorMessage(representativeErrors.title) && (
+                <p className="error-text">{fieldErrorMessage(representativeErrors.title)}</p>
+              )}
             </div>
             <div>
-              <label htmlFor="rep-first" className="label">First name</label>
+              <label htmlFor="rep-first" className="label">First name (required)</label>
               <input id="rep-first" className="input" {...register('representative.firstName')} />
               {fieldErrorMessage(representativeErrors.firstName) && (
                 <p className="error-text">{fieldErrorMessage(representativeErrors.firstName)}</p>
               )}
             </div>
             <div>
-              <label htmlFor="rep-last" className="label">Last name</label>
+              <label htmlFor="rep-last" className="label">Last name (required)</label>
               <input id="rep-last" className="input" {...register('representative.lastName')} />
               {fieldErrorMessage(representativeErrors.lastName) && (
                 <p className="error-text">{fieldErrorMessage(representativeErrors.lastName)}</p>
               )}
             </div>
             <div>
-              <label htmlFor="rep-position" className="label">Position</label>
+              <label htmlFor="rep-position" className="label">Position (required)</label>
               <input id="rep-position" className="input" {...register('representative.position')} />
+              {fieldErrorMessage(representativeErrors.position) && (
+                <p className="error-text">{fieldErrorMessage(representativeErrors.position)}</p>
+              )}
             </div>
             <div>
-              <label htmlFor="rep-org" className="label">Organisation (optional)</label>
+              <label htmlFor="rep-org" className="label">Organisation (required)</label>
               <input id="rep-org" className="input" {...register('representative.organisation')} />
+              {fieldErrorMessage(representativeErrors.organisation) && (
+                <p className="error-text">{fieldErrorMessage(representativeErrors.organisation)}</p>
+              )}
             </div>
             <AddressFields
               idPrefix="rep"
@@ -366,24 +383,28 @@ export function StepAboutYou({ isAuthenticated }: Props) {
               suburb={form.representative.suburb}
               state={form.representative.state}
               postcode={form.representative.postcode}
+              required
             />
             <div>
-              <label htmlFor="rep-email" className="label">Email (optional)</label>
+              <label htmlFor="rep-email" className="label">Email (required)</label>
               <input id="rep-email" type="email" className="input" {...register('representative.email')} />
               {fieldErrorMessage(representativeErrors.email) && (
                 <p className="error-text">{fieldErrorMessage(representativeErrors.email)}</p>
               )}
             </div>
             <div>
-              <label htmlFor="rep-mobile" className="label">Mobile</label>
+              <label htmlFor="rep-mobile" className="label">Mobile (required)</label>
               {renderRepresentativeMobile()}
               {fieldErrorMessage(representativeErrors.mobile) && (
                 <p className="error-text">{fieldErrorMessage(representativeErrors.mobile)}</p>
               )}
             </div>
             <div className="sm:col-span-2">
-              <label htmlFor="rep-assist" className="label">Assistance required to participate (optional)</label>
+              <label htmlFor="rep-assist" className="label">Assistance required to participate (required)</label>
               <textarea id="rep-assist" className="input min-h-[80px]" {...register('representative.assistanceRequired')} />
+              {fieldErrorMessage(representativeErrors.assistanceRequired) && (
+                <p className="error-text">{fieldErrorMessage(representativeErrors.assistanceRequired)}</p>
+              )}
             </div>
           </div>
         )}
@@ -399,6 +420,7 @@ function AddressFields({
   suburb,
   state,
   postcode,
+  required = false,
 }: {
   idPrefix: string;
   namePrefix: AddressPrefix;
@@ -406,8 +428,16 @@ function AddressFields({
   suburb?: string | null;
   state?: string | null;
   postcode?: string | null;
+  required?: boolean;
 }) {
-  const { control, register, setValue } = useFormContext<WizardForm>();
+  const {
+    control,
+    register,
+    setValue,
+    formState: { errors },
+  } = useFormContext<WizardForm>();
+  const fieldErrors = namePrefix === 'complainantContact' ? errors.complainantContact : errors.representative;
+  const requiredSuffix = required ? ' (required)' : '';
 
   function patchAddress(patch: AddressPatch) {
     (Object.entries(patch) as Array<[AddressField, string | null | undefined]>).forEach(([field, value]) => {
@@ -418,15 +448,18 @@ function AddressFields({
   return (
     <>
       <div className="sm:col-span-2">
-        <label htmlFor={`${idPrefix}-address`} className="label">Address</label>
+        <label htmlFor={`${idPrefix}-address`} className="label">Address{requiredSuffix}</label>
         <input
           id={`${idPrefix}-address`}
           className="input"
           {...register(addressPath(namePrefix, 'addressLine'))}
         />
+        {fieldErrorMessage(fieldErrors?.addressLine) && (
+          <p className="error-text">{fieldErrorMessage(fieldErrors?.addressLine)}</p>
+        )}
       </div>
       <div>
-        <label htmlFor={`${idPrefix}-state`} className="label">State/Territory</label>
+        <label htmlFor={`${idPrefix}-state`} className="label">State/Territory{requiredSuffix}</label>
         <Controller
           control={control}
           name={addressPath(namePrefix, 'state')}
@@ -445,9 +478,12 @@ function AddressFields({
             />
           )}
         />
+        {fieldErrorMessage(fieldErrors?.state) && (
+          <p className="error-text">{fieldErrorMessage(fieldErrors?.state)}</p>
+        )}
       </div>
       <div>
-        <label htmlFor={`${idPrefix}-suburb`} className="label">Suburb</label>
+        <label htmlFor={`${idPrefix}-suburb`} className="label">Suburb{requiredSuffix}</label>
         <SuburbCombobox
           id={`${idPrefix}-suburb`}
           state={state ?? ''}
@@ -455,14 +491,20 @@ function AddressFields({
           postcode={postcode ?? ''}
           onPatch={patchAddress}
         />
+        {fieldErrorMessage(fieldErrors?.suburb) && (
+          <p className="error-text">{fieldErrorMessage(fieldErrors?.suburb)}</p>
+        )}
       </div>
       <div>
-        <label htmlFor={`${idPrefix}-postcode`} className="label">Postcode</label>
+        <label htmlFor={`${idPrefix}-postcode`} className="label">Postcode{requiredSuffix}</label>
         <input
           id={`${idPrefix}-postcode`}
           className="input"
           {...register(addressPath(namePrefix, 'postcode'))}
         />
+        {fieldErrorMessage(fieldErrors?.postcode) && (
+          <p className="error-text">{fieldErrorMessage(fieldErrors?.postcode)}</p>
+        )}
       </div>
     </>
   );

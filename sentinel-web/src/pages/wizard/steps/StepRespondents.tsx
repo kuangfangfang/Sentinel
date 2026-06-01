@@ -40,7 +40,7 @@ function fieldErrorMessage(error: unknown): string | undefined {
 }
 
 function digitsOnly(value: unknown): string {
-  return typeof value === 'string' ? value.replace(/\D/g, '') : '';
+  return typeof value === 'string' ? value.replace(/\D/g, '').slice(0, 10) : '';
 }
 
 function RespondentFieldset({ respondent, index, onRemove }: RespondentFieldsetProps) {
@@ -182,10 +182,10 @@ function RespondentFieldset({ respondent, index, onRemove }: RespondentFieldsetP
         <div className="sm:col-span-2">
           <label htmlFor={`r-name-${respondent.uiKey}`} className="label">
             {respondent.partyType === 'person'
-              ? 'Name of person'
+              ? 'Name of person (required)'
               : respondent.partyType === 'organisation'
-              ? 'Name of organisation'
-              : 'Name of person or organisation'}
+              ? 'Name of organisation (required)'
+              : 'Name of person or organisation (required)'}
           </label>
           <input
             id={`r-name-${respondent.uiKey}`}
@@ -199,15 +199,18 @@ function RespondentFieldset({ respondent, index, onRemove }: RespondentFieldsetP
 
         {respondent.partyType === 'organisation' && (
           <div className="sm:col-span-2">
-            <label htmlFor={`r-abn-${respondent.uiKey}`} className="label">ABN / ACN</label>
+            <label htmlFor={`r-abn-${respondent.uiKey}`} className="label">ABN / ACN (required)</label>
             <input
               id={`r-abn-${respondent.uiKey}`}
               className="input"
               inputMode="numeric"
               pattern="[0-9]*"
-              maxLength={11}
               placeholder="e.g. 12345678901 (ABN) or 123456789 (ACN)"
               {...abnRegistration}
+              onChange={(e) => {
+                e.target.value = normalizeAbnAcn(e.target.value);
+                abnRegistration.onChange(e);
+              }}
             />
             <p className={`mt-1 text-sm ${helperTone}`}>{helperText}</p>
             {fieldErrorMessage(respondentErrors.abnAcn) && (
@@ -220,40 +223,55 @@ function RespondentFieldset({ respondent, index, onRemove }: RespondentFieldsetP
         )}
 
         <div>
-          <label htmlFor={`r-rel-${respondent.uiKey}`} className="label">Your relationship to them</label>
+          <label htmlFor={`r-rel-${respondent.uiKey}`} className="label">Your relationship to them (required)</label>
           <input
             id={`r-rel-${respondent.uiKey}`}
             className="input"
             placeholder="e.g. Employer, service provider"
             {...register(`respondents.${index}.relationshipToComplainant`)}
           />
+          {fieldErrorMessage(respondentErrors.relationshipToComplainant) && (
+            <p className="error-text">{fieldErrorMessage(respondentErrors.relationshipToComplainant)}</p>
+          )}
         </div>
         <div className="sm:col-span-2">
-          <label htmlFor={`r-address-${respondent.uiKey}`} className="label">Address</label>
+          <label htmlFor={`r-address-${respondent.uiKey}`} className="label">Address (required)</label>
           <input
             id={`r-address-${respondent.uiKey}`}
             className="input"
             {...register(`respondents.${index}.addressLine`)}
           />
+          {fieldErrorMessage(respondentErrors.addressLine) && (
+            <p className="error-text">{fieldErrorMessage(respondentErrors.addressLine)}</p>
+          )}
         </div>
         <div>
-          <label htmlFor={`r-state-${respondent.uiKey}`} className="label">State/Territory</label>
+          <label htmlFor={`r-state-${respondent.uiKey}`} className="label">State/Territory (required)</label>
           <StateCombobox index={index} respondent={respondent} />
+          {fieldErrorMessage(respondentErrors.state) && (
+            <p className="error-text">{fieldErrorMessage(respondentErrors.state)}</p>
+          )}
         </div>
         <div>
-          <label htmlFor={`r-suburb-${respondent.uiKey}`} className="label">Suburb</label>
+          <label htmlFor={`r-suburb-${respondent.uiKey}`} className="label">Suburb (required)</label>
           <SuburbCombobox index={index} respondent={respondent} />
+          {fieldErrorMessage(respondentErrors.suburb) && (
+            <p className="error-text">{fieldErrorMessage(respondentErrors.suburb)}</p>
+          )}
         </div>
         <div>
-          <label htmlFor={`r-postcode-${respondent.uiKey}`} className="label">Postcode</label>
+          <label htmlFor={`r-postcode-${respondent.uiKey}`} className="label">Postcode (required)</label>
           <input
             id={`r-postcode-${respondent.uiKey}`}
             className="input"
             {...register(`respondents.${index}.postcode`)}
           />
+          {fieldErrorMessage(respondentErrors.postcode) && (
+            <p className="error-text">{fieldErrorMessage(respondentErrors.postcode)}</p>
+          )}
         </div>
         <div>
-          <label htmlFor={`r-email-${respondent.uiKey}`} className="label">Email</label>
+          <label htmlFor={`r-email-${respondent.uiKey}`} className="label">Email (required)</label>
           <input
             id={`r-email-${respondent.uiKey}`}
             type="email"
@@ -272,19 +290,27 @@ function RespondentFieldset({ respondent, index, onRemove }: RespondentFieldsetP
             inputMode="numeric"
             pattern="[0-9]*"
             {...phoneRegistration}
+            onChange={(e) => {
+              e.target.value = digitsOnly(e.target.value);
+              phoneRegistration.onChange(e);
+            }}
           />
           {fieldErrorMessage(respondentErrors.contactPhone) && (
             <p className="error-text">{fieldErrorMessage(respondentErrors.contactPhone)}</p>
           )}
         </div>
         <div>
-          <label htmlFor={`r-mobile-${respondent.uiKey}`} className="label">Mobile</label>
+          <label htmlFor={`r-mobile-${respondent.uiKey}`} className="label">Mobile (required)</label>
           <input
             id={`r-mobile-${respondent.uiKey}`}
             className="input"
             inputMode="numeric"
             pattern="[0-9]*"
             {...mobileRegistration}
+            onChange={(e) => {
+              e.target.value = digitsOnly(e.target.value);
+              mobileRegistration.onChange(e);
+            }}
           />
           {fieldErrorMessage(respondentErrors.mobile) && (
             <p className="error-text">{fieldErrorMessage(respondentErrors.mobile)}</p>
@@ -366,6 +392,7 @@ function SuburbCombobox({ index, respondent }: { index: number; respondent: Wiza
       id={`r-suburb-${respondent.uiKey}`}
       options={options}
       value={selectedValue}
+      displayValue={respondent.suburb ?? null}
       onChange={(val) => {
         if (!val) {
           setValue(`respondents.${index}.suburb`, '', RHF_UPDATE);

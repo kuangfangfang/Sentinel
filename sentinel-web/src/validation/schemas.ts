@@ -8,6 +8,12 @@ const looseStringSchema = z.string().optional().nullable().transform((value) => 
 const looseBooleanSchema = z.boolean().optional().transform((value) => value ?? false);
 const looseNullableBooleanSchema = z.boolean().optional().nullable().transform((value) => value ?? null);
 
+const maxLengthMessage = (label: string, max: number) => `${label} must be ${max} characters or fewer`;
+const optionalLimitedTextSchema = (label: string, max: number) =>
+  looseStringSchema.refine((value) => value.trim().length <= max, {
+    message: maxLengthMessage(label, max),
+  });
+
 export const australianMobileSchema = z
   .string()
   .min(1, 'Mobile number is required')
@@ -47,17 +53,26 @@ export const loginSchema = z.object({
 });
 
 export const registerSchema = z.object({
-  fullName: requiredTextSchema('Full name is required'),
+  fullName: z
+    .string()
+    .trim()
+    .min(2, 'Full name must be at least 2 characters')
+    .max(150, maxLengthMessage('Full name', 150)),
   email: emailSchema,
   password: z
     .string()
     .min(10, 'Password must be at least 10 characters')
+    .max(100, maxLengthMessage('Password', 100))
     .regex(/[A-Za-z]/, 'Password must include a letter')
     .regex(/\d/, 'Password must include a number'),
 });
 
 export const trackSchema = z.object({
-  code: requiredTextSchema('Reference code is required'),
+  code: z
+    .string()
+    .trim()
+    .min(4, 'Reference code must be at least 4 characters')
+    .max(30, maxLengthMessage('Reference code', 30)),
 });
 
 export const queueFilterSchema = z.object({
@@ -73,7 +88,7 @@ export const caseNoteSchema = z.object({
 
 export const statusChangeSchema = z.object({
   statusTarget: requiredTextSchema('Choose a new status'),
-  statusNote: z.string(),
+  statusNote: z.string().max(1000, maxLengthMessage('Status note', 1000)),
 });
 
 const optionalDateSchema = z
@@ -86,13 +101,13 @@ const optionalDateSchema = z
   });
 
 export const complainantContactSchema = z.object({
-  title: optionalTextSchema,
-  firstName: optionalTextSchema,
-  lastName: optionalTextSchema,
+  title: optionalLimitedTextSchema('Title', 40),
+  firstName: optionalLimitedTextSchema('First name', 100),
+  lastName: optionalLimitedTextSchema('Last name', 100),
   addressLine: optionalTextSchema,
   suburb: optionalTextSchema,
   state: optionalTextSchema,
-  postcode: optionalTextSchema,
+  postcode: optionalLimitedTextSchema('Postcode', 10),
   email: optionalEmailSchema,
   phoneAh: optionalTextSchema,
   phoneBh: optionalAustralianMobileSchema,
@@ -131,14 +146,14 @@ export const representativeSchema = z
 
 export const groundSelectionSchema = z.object({
   groundType: requiredTextSchema('Select at least one ground of complaint'),
-  conditionalDetail: optionalTextSchema,
+  conditionalDetail: optionalLimitedTextSchema('Ground detail', 300),
 });
 
 export const respondentSchema = z.object({
   uiKey: requiredTextSchema('Respondent identifier is required'),
   partyType: z.enum(['person', 'organisation']),
-  name: looseStringSchema,
-  abnAcn: optionalTextSchema,
+  name: optionalLimitedTextSchema('Respondent name', 200),
+  abnAcn: optionalLimitedTextSchema('ABN / ACN', 20),
   contactEmail: optionalEmailSchema,
   contactPhone: optionalTextSchema,
   mobile: optionalAustralianMobileSchema,
@@ -146,18 +161,41 @@ export const respondentSchema = z.object({
   suburb: optionalTextSchema,
   state: optionalTextSchema,
   postcode: optionalTextSchema,
-  relationshipToComplainant: optionalTextSchema,
+  relationshipToComplainant: optionalLimitedTextSchema('Relationship to respondent', 200),
 });
+
+function addRequiredIssue(
+  ctx: z.RefinementCtx,
+  path: Array<string | number>,
+  message: string,
+) {
+  ctx.addIssue({
+    code: z.ZodIssueCode.custom,
+    path,
+    message,
+  });
+}
+
+function requireTrimmedString(
+  ctx: z.RefinementCtx,
+  value: unknown,
+  path: Array<string | number>,
+  message: string,
+) {
+  if (typeof value !== 'string' || !value.trim()) {
+    addRequiredIssue(ctx, path, message);
+  }
+}
 
 function buildWizardSchema(options: { isAuthenticated: boolean; step?: number; validateAll?: boolean }) {
   const shouldValidateStep = (step: number) => options.validateAll || options.step === step;
 
   return z
   .object({
-    title: looseStringSchema,
+    title: optionalLimitedTextSchema('Complaint title', 150),
     description: looseStringSchema,
     incidentDate: looseStringSchema,
-    incidentLocation: looseStringSchema,
+    incidentLocation: optionalLimitedTextSchema('Incident location', 200),
     desiredOutcome: looseStringSchema,
     complainantContact: complainantContactSchema.optional().default({
       title: '',
@@ -174,14 +212,14 @@ function buildWizardSchema(options: { isAuthenticated: boolean; step?: number; v
     }),
     referringOrganisation: looseStringSchema,
     priorComplaintMade: looseNullableBooleanSchema,
-    priorComplaintAgency: looseStringSchema,
+    priorComplaintAgency: optionalLimitedTextSchema('Prior complaint agency', 200),
     priorComplaintDate: optionalDateSchema,
-    priorComplaintStatus: looseStringSchema,
+    priorComplaintStatus: optionalLimitedTextSchema('Prior complaint status', 120),
     priorComplaintFinalisedDate: optionalDateSchema,
     priorComplaintOutcome: looseStringSchema,
-    delayReason: looseStringSchema,
+    delayReason: optionalLimitedTextSchema('Delay reason', 2000),
     interpreterRequired: looseBooleanSchema,
-    preferredLanguage: looseStringSchema,
+    preferredLanguage: optionalLimitedTextSchema('Preferred language', 60),
     genAiUsed: looseNullableBooleanSchema,
     privacyNoticeAccepted: looseBooleanSchema,
     grounds: z.array(groundSelectionSchema).optional().transform((value) => value ?? []),
@@ -216,6 +254,14 @@ function buildWizardSchema(options: { isAuthenticated: boolean; step?: number; v
       }
     }
 
+    if (shouldValidateStep(1) && options.isAuthenticated && !form.complainantContact.phoneBh?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['complainantContact', 'phoneBh'],
+        message: 'Please provide your mobile number',
+      });
+    }
+
     if (shouldValidateStep(1) && form.interpreterRequired && !form.preferredLanguage.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -225,39 +271,26 @@ function buildWizardSchema(options: { isAuthenticated: boolean; step?: number; v
     }
 
     if (shouldValidateStep(1) && form.onBehalfOf) {
-      if (!form.onBehalfOf.firstName.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['onBehalfOf', 'firstName'],
-          message: 'Please give the first name of the person you are complaining for',
-        });
-      }
-
-      if (!form.onBehalfOf.lastName.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['onBehalfOf', 'lastName'],
-          message: 'Please give the last name of the person you are complaining for',
-        });
-      }
+      requireTrimmedString(ctx, form.onBehalfOf.firstName, ['onBehalfOf', 'firstName'], 'Please give the first name of the person you are complaining for');
+      requireTrimmedString(ctx, form.onBehalfOf.lastName, ['onBehalfOf', 'lastName'], 'Please give the last name of the person you are complaining for');
+      requireTrimmedString(ctx, form.onBehalfOf.email, ['onBehalfOf', 'email'], 'Please provide the email address of the person you are complaining for');
+      requireTrimmedString(ctx, form.onBehalfOf.relationshipToComplainant, ['onBehalfOf', 'relationshipToComplainant'], 'Please explain your relationship to the person you are complaining for');
+      requireTrimmedString(ctx, form.onBehalfOf.assistanceRequired, ['onBehalfOf', 'assistanceRequired'], 'Please tell us what assistance the person you are complaining for needs');
     }
 
     if (shouldValidateStep(1) && form.representative) {
-      if (!form.representative.firstName.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['representative', 'firstName'],
-          message: 'Please give the first name of your representative',
-        });
-      }
-
-      if (!form.representative.lastName.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['representative', 'lastName'],
-          message: 'Please give the last name of your representative',
-        });
-      }
+      requireTrimmedString(ctx, form.representative.title, ['representative', 'title'], "Please select your representative's title");
+      requireTrimmedString(ctx, form.representative.firstName, ['representative', 'firstName'], 'Please give the first name of your representative');
+      requireTrimmedString(ctx, form.representative.lastName, ['representative', 'lastName'], 'Please give the last name of your representative');
+      requireTrimmedString(ctx, form.representative.position, ['representative', 'position'], "Please provide your representative's position");
+      requireTrimmedString(ctx, form.representative.organisation, ['representative', 'organisation'], "Please provide your representative's organisation");
+      requireTrimmedString(ctx, form.representative.addressLine, ['representative', 'addressLine'], "Please provide your representative's address");
+      requireTrimmedString(ctx, form.representative.state, ['representative', 'state'], "Please select your representative's state or territory");
+      requireTrimmedString(ctx, form.representative.suburb, ['representative', 'suburb'], "Please select your representative's suburb");
+      requireTrimmedString(ctx, form.representative.postcode, ['representative', 'postcode'], "Please provide your representative's postcode");
+      requireTrimmedString(ctx, form.representative.email, ['representative', 'email'], "Please provide your representative's email address");
+      requireTrimmedString(ctx, form.representative.mobile, ['representative', 'mobile'], "Please provide your representative's mobile number");
+      requireTrimmedString(ctx, form.representative.assistanceRequired, ['representative', 'assistanceRequired'], 'Please tell us what assistance is required to participate');
     }
 
     if (shouldValidateStep(2)) {
@@ -270,6 +303,36 @@ function buildWizardSchema(options: { isAuthenticated: boolean; step?: number; v
       }
 
       form.respondents.forEach((respondent, index) => {
+        const requiredFields: Array<[keyof typeof respondent, string]> = [
+          ['name', 'Enter the respondent name'],
+          ['relationshipToComplainant', 'Enter your relationship to the respondent'],
+          ['addressLine', 'Enter the respondent address'],
+          ['state', 'Select the respondent state or territory'],
+          ['suburb', 'Select the respondent suburb'],
+          ['postcode', 'Enter the respondent postcode'],
+          ['contactEmail', 'Enter the respondent email address'],
+          ['mobile', 'Enter the respondent mobile number'],
+        ];
+
+        requiredFields.forEach(([field, message]) => {
+          const value = respondent[field];
+          if (typeof value !== 'string' || !value.trim()) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['respondents', index, field],
+              message,
+            });
+          }
+        });
+
+        if (respondent.partyType === 'organisation' && !respondent.abnAcn?.trim()) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['respondents', index, 'abnAcn'],
+            message: 'Enter the organisation ABN or ACN',
+          });
+        }
+
         if (respondent.partyType === 'organisation' && respondent.abnAcn?.trim()) {
           const result = validateAbnAcn(respondent.abnAcn);
           if (result.kind === 'invalid' || result.kind === 'incomplete') {
