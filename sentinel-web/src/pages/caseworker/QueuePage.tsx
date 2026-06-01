@@ -1,4 +1,7 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 import { Link } from 'react-router-dom';
 import { caseworkerApi } from '../../api/caseworker';
 import { complaintsApi } from '../../api/complaints';
@@ -6,17 +9,26 @@ import type { ComplaintStatus, GroundDto, PagedResult, QueueItemDto, QueueQuery,
 import { Spinner } from '../../components/Spinner';
 import { SeverityBadge, StatusBadge } from '../../components/StatusBadge';
 import { formatDate } from '../../utils/format';
+import { queueFilterSchema } from '../../validation/schemas';
 
 const STATUSES: ComplaintStatus[] = ['Submitted', 'UnderReview', 'MoreInfoNeeded', 'Resolved', 'Closed', 'Withdrawn'];
 const SEVERITIES: Severity[] = ['Low', 'Medium', 'High', 'Critical'];
+const DEFAULT_QUERY: QueueQuery = { page: 1, pageSize: 10, sortBy: 'submitted', sortDescending: true };
+const DEFAULT_FILTERS = { search: '', status: '', severity: '', ground: '' };
+
+type QueueFilterData = z.infer<typeof queueFilterSchema>;
 
 export function QueuePage() {
-  const [query, setQuery] = useState<QueueQuery>({ page: 1, pageSize: 10, sortBy: 'submitted', sortDescending: true });
-  const [searchInput, setSearchInput] = useState('');
+  const [query, setQuery] = useState<QueueQuery>(DEFAULT_QUERY);
   const [result, setResult] = useState<PagedResult<QueueItemDto> | null>(null);
   const [grounds, setGrounds] = useState<GroundDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { register, handleSubmit, reset } = useForm<QueueFilterData>({
+    resolver: zodResolver(queueFilterSchema),
+    defaultValues: DEFAULT_FILTERS,
+    mode: 'onChange',
+  });
 
   useEffect(() => {
     complaintsApi.getGrounds().then(setGrounds).catch(() => undefined);
@@ -38,9 +50,19 @@ export function QueuePage() {
   function patch(p: Partial<QueueQuery>) {
     setQuery((q) => ({ ...q, page: 1, ...p }));
   }
-  function onSearch(e: FormEvent) {
-    e.preventDefault();
-    patch({ search: searchInput.trim() || undefined });
+
+  function onSearch(data: QueueFilterData) {
+    patch({
+      search: data.search.trim() || undefined,
+      status: (data.status || undefined) as ComplaintStatus | undefined,
+      severity: (data.severity || undefined) as Severity | undefined,
+      ground: data.ground || undefined,
+    });
+  }
+
+  function clearFilters() {
+    reset(DEFAULT_FILTERS);
+    setQuery(DEFAULT_QUERY);
   }
 
   const items = result?.items ?? [];
@@ -49,44 +71,57 @@ export function QueuePage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Triage queue</h1>
-        <Link to="/caseworker" className="btn-ghost">← Dashboard</Link>
+        <Link to="/caseworker" className="btn-ghost">Dashboard</Link>
       </div>
 
-      {/* Filters */}
       <div className="card p-4">
-        <form onSubmit={onSearch} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <form onSubmit={handleSubmit(onSearch)} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-2">
             <label htmlFor="search" className="label">Search</label>
-            <input id="search" className="input" placeholder="Reference code or keyword"
-              value={searchInput} onChange={(e) => setSearchInput(e.target.value)} />
+            <input id="search" className="input" placeholder="Reference code or keyword" {...register('search')} />
           </div>
           <div>
             <label htmlFor="status" className="label">Status</label>
-            <select id="status" className="input" value={query.status ?? ''}
-              onChange={(e) => patch({ status: (e.target.value || undefined) as ComplaintStatus | undefined })}>
+            <select
+              id="status"
+              className="input"
+              {...register('status', {
+                onChange: (e) => patch({ status: (e.target.value || undefined) as ComplaintStatus | undefined }),
+              })}
+            >
               <option value="">All</option>
               {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
           <div>
             <label htmlFor="severity" className="label">Severity</label>
-            <select id="severity" className="input" value={query.severity ?? ''}
-              onChange={(e) => patch({ severity: (e.target.value || undefined) as Severity | undefined })}>
+            <select
+              id="severity"
+              className="input"
+              {...register('severity', {
+                onChange: (e) => patch({ severity: (e.target.value || undefined) as Severity | undefined }),
+              })}
+            >
               <option value="">All</option>
               {SEVERITIES.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
           <div>
             <label htmlFor="ground" className="label">Category</label>
-            <select id="ground" className="input" value={query.ground ?? ''}
-              onChange={(e) => patch({ ground: e.target.value || undefined })}>
+            <select
+              id="ground"
+              className="input"
+              {...register('ground', {
+                onChange: (e) => patch({ ground: e.target.value || undefined }),
+              })}
+            >
               <option value="">All</option>
               {grounds.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
             </select>
           </div>
           <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-5">
             <button type="submit" className="btn-primary">Search</button>
-            <button type="button" className="btn-ghost" onClick={() => { setSearchInput(''); setQuery({ page: 1, pageSize: 10, sortBy: 'submitted', sortDescending: true }); }}>
+            <button type="button" className="btn-ghost" onClick={clearFilters}>
               Clear filters
             </button>
           </div>
@@ -104,7 +139,6 @@ export function QueuePage() {
             <div className="card p-8 text-center text-slate-600">No complaints match your filters.</div>
           ) : (
             <>
-              {/* Desktop: data table (lg and up) */}
               <div className="hidden overflow-hidden rounded-xl border border-slate-200 lg:block">
                 <table className="min-w-full divide-y divide-slate-200">
                   <thead className="bg-slate-50">
@@ -117,7 +151,7 @@ export function QueuePage() {
                   <tbody className="divide-y divide-slate-100 bg-white">
                     {items.map((c) => (
                       <tr key={c.id} className="hover:bg-slate-50">
-                        <td className="px-4 py-3 font-mono text-xs text-slate-600">{c.referenceCode ?? '—'}</td>
+                        <td className="px-4 py-3 font-mono text-xs text-slate-600">{c.referenceCode ?? '-'}</td>
                         <td className="max-w-xs truncate px-4 py-3 font-medium text-navy-900">{c.title}</td>
                         <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
                         <td className="px-4 py-3"><SeverityBadge severity={c.severity} /></td>
@@ -132,12 +166,11 @@ export function QueuePage() {
                 </table>
               </div>
 
-              {/* Mobile: stacked cards (below lg) — the same data, reflowed (SRS 8.2, AC-12) */}
               <ul className="space-y-3 lg:hidden">
                 {items.map((c) => (
                   <li key={c.id} className="card p-4">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono text-xs text-slate-500">{c.referenceCode ?? '—'}</span>
+                      <span className="font-mono text-xs text-slate-500">{c.referenceCode ?? '-'}</span>
                       <StatusBadge status={c.status} />
                     </div>
                     <Link to={`/caseworker/complaints/${c.id}`} className="mt-1 block font-semibold text-navy-900 hover:underline">
@@ -152,16 +185,15 @@ export function QueuePage() {
                 ))}
               </ul>
 
-              {/* Pagination */}
               <div className="flex items-center justify-between">
                 <button className="btn-secondary" disabled={query.page! <= 1}
                   onClick={() => setQuery((q) => ({ ...q, page: (q.page ?? 1) - 1 }))}>
-                  ← Previous
+                  Previous
                 </button>
                 <span className="text-sm text-slate-500">Page {result.page} of {Math.max(result.totalPages, 1)}</span>
                 <button className="btn-secondary" disabled={result.page >= result.totalPages}
                   onClick={() => setQuery((q) => ({ ...q, page: (q.page ?? 1) + 1 }))}>
-                  Next →
+                  Next
                 </button>
               </div>
             </>

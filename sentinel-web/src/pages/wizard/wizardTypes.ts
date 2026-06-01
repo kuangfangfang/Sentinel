@@ -41,13 +41,7 @@ export interface WizardForm {
   representative: RepresentativeDto | null;
 }
 
-export type UpdateForm = (patch: Partial<WizardForm>) => void;
-
-export interface StepProps {
-  form: WizardForm;
-  update: UpdateForm;
-  errors: string[];
-}
+export interface StepProps {}
 
 function createUiKey(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
@@ -155,12 +149,9 @@ export function toWriteDto(form: WizardForm, wizardStep: number): ComplaintWrite
     grounds: form.grounds.filter((g) => g.groundType),
     respondents: form.respondents
       .filter((r) => r.name.trim().length > 0)
-      .map(({ uiKey, partyType, ...respondent }) => ({
-        ...respondent,
-        abnAcn: partyType === 'organisation' ? normalizeAbnAcn(respondent.abnAcn ?? '') || null : null,
-      })),
-    onBehalfOf: form.onBehalfOf,
-    representative: form.representative ? { ...form.representative, phoneBh: null } : null,
+      .map(trimRespondent),
+    onBehalfOf: form.onBehalfOf ? trimOnBehalfOf(form.onBehalfOf) : null,
+    representative: form.representative ? trimRepresentative(form.representative) : null,
     wizardStep,
   };
 }
@@ -197,4 +188,51 @@ function trimComplainantContact(contact: ComplainantContactDto): ComplainantCont
   };
 
   return Object.values(trimmed).some(Boolean) ? trimmed : null;
+}
+
+function optionalString(value: string | null | undefined): string | null {
+  return value?.trim() || null;
+}
+
+function trimRespondent({ uiKey: _uiKey, partyType, ...respondent }: WizardRespondent): RespondentDto {
+  return {
+    name: respondent.name.trim(),
+    abnAcn: partyType === 'organisation' ? normalizeAbnAcn(respondent.abnAcn ?? '') || null : null,
+    contactEmail: optionalString(respondent.contactEmail),
+    contactPhone: optionalString(respondent.contactPhone),
+    mobile: optionalString(respondent.mobile),
+    addressLine: optionalString(respondent.addressLine),
+    suburb: optionalString(respondent.suburb),
+    state: optionalString(respondent.state),
+    postcode: optionalString(respondent.postcode),
+    relationshipToComplainant: optionalString(respondent.relationshipToComplainant),
+  };
+}
+
+function trimOnBehalfOf(person: OnBehalfOfDto): OnBehalfOfDto {
+  return {
+    firstName: person.firstName.trim(),
+    lastName: person.lastName.trim(),
+    email: optionalString(person.email),
+    relationshipToComplainant: optionalString(person.relationshipToComplainant),
+    assistanceRequired: optionalString(person.assistanceRequired),
+  };
+}
+
+function trimRepresentative(representative: RepresentativeDto): RepresentativeDto {
+  return {
+    title: optionalString(representative.title),
+    firstName: representative.firstName.trim(),
+    lastName: representative.lastName.trim(),
+    position: optionalString(representative.position),
+    organisation: optionalString(representative.organisation),
+    addressLine: optionalString(representative.addressLine),
+    suburb: optionalString(representative.suburb),
+    state: optionalString(representative.state),
+    postcode: optionalString(representative.postcode),
+    email: optionalString(representative.email),
+    phoneBh: null,
+    mobile: optionalString(representative.mobile),
+    assistanceRequired: optionalString(representative.assistanceRequired),
+  };
 }

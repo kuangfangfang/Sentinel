@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
+import { useFormContext, useWatch } from 'react-hook-form';
 import type { StepProps } from '../wizardTypes';
+import type { WizardForm } from '../wizardTypes';
 import type { ComplainantContactDto, GroundDto, OnBehalfOfDto, RepresentativeDto, RespondentDto } from '../../../types';
 import { formatDateOnly } from '../../../utils/format';
 import { InfoTooltip } from '../../../components/InfoTooltip';
@@ -7,6 +9,8 @@ import { InfoTooltip } from '../../../components/InfoTooltip';
 interface Props extends StepProps {
   groundsCatalog: GroundDto[];
 }
+
+const RHF_UPDATE = { shouldDirty: true, shouldValidate: true };
 
 function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
@@ -113,7 +117,14 @@ function RespondentsSummary({ respondents }: { respondents: RespondentDto[] }) {
   );
 }
 
-export function StepReview({ form, update, groundsCatalog }: Props) {
+export function StepReview({ groundsCatalog }: Props) {
+  const {
+    control,
+    register,
+    setValue,
+    formState: { errors },
+  } = useFormContext<WizardForm>();
+  const form = useWatch({ control }) as WizardForm;
   const labelFor = (value: string) => groundsCatalog.find((g) => g.value === value)?.label ?? value;
 
   return (
@@ -172,11 +183,11 @@ export function StepReview({ form, update, groundsCatalog }: Props) {
           <input
             type="checkbox"
             className="mt-1 h-4 w-4"
-            checked={form.privacyNoticeAccepted}
-            onChange={(e) => update({ privacyNoticeAccepted: e.target.checked })}
+            {...register('privacyNoticeAccepted')}
           />
           <span className="text-sm">I have read and understood the privacy collection notice.</span>
         </label>
+        {errors.privacyNoticeAccepted && <p className="error-text">{errors.privacyNoticeAccepted.message}</p>}
       </section>
 
       <fieldset className="rounded-lg border border-slate-200 p-4">
@@ -204,14 +215,25 @@ export function StepReview({ form, update, groundsCatalog }: Props) {
         </p>
         <div className="mt-3 flex gap-4">
           <label className="flex items-center gap-2">
-            <input type="radio" name="genai" checked={form.genAiUsed === true} onChange={() => update({ genAiUsed: true })} />
+            <input
+              type="radio"
+              name="genai"
+              checked={form.genAiUsed === true}
+              onChange={() => setValue('genAiUsed', true, RHF_UPDATE)}
+            />
             <span>Yes</span>
           </label>
           <label className="flex items-center gap-2">
-            <input type="radio" name="genai" checked={form.genAiUsed === false} onChange={() => update({ genAiUsed: false })} />
+            <input
+              type="radio"
+              name="genai"
+              checked={form.genAiUsed === false}
+              onChange={() => setValue('genAiUsed', false, RHF_UPDATE)}
+            />
             <span>No</span>
           </label>
         </div>
+        {errors.genAiUsed && <p className="error-text">{errors.genAiUsed.message}</p>}
       </fieldset>
     </div>
   );

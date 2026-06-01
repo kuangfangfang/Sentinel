@@ -1,24 +1,37 @@
-import { FormEvent, useState } from 'react';
+import { useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 import { trackingApi } from '../api/tracking';
 import { ApiError } from '../api/client';
 import type { TrackResultDto } from '../types';
 import { StatusBadge } from '../components/StatusBadge';
 import { StatusTimeline } from '../components/StatusTimeline';
 import { formatDateTime } from '../utils/format';
+import { trackSchema } from '../validation/schemas';
+
+type TrackFormData = z.infer<typeof trackSchema>;
 
 export function TrackPage() {
-  const [code, setCode] = useState('');
   const [result, setResult] = useState<TrackResultDto | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<TrackFormData>({
+    resolver: zodResolver(trackSchema),
+    defaultValues: { code: '' },
+    mode: 'onChange',
+  });
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  async function onSubmit(data: TrackFormData) {
     setError(null);
     setResult(null);
     setBusy(true);
     try {
-      setResult(await trackingApi.track(code.trim()));
+      setResult(await trackingApi.track(data.code.trim()));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not look up that reference code.');
     } finally {
@@ -31,18 +44,23 @@ export function TrackPage() {
       <div>
         <h1 className="text-2xl font-bold">Track a complaint</h1>
         <p className="mt-1 text-slate-600">
-          Enter the reference code you received when you lodged your complaint. You don’t need an account.
+          Enter the reference code you received when you lodged your complaint. You do not need an account.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="card flex flex-col gap-3 p-6 sm:flex-row sm:items-end">
+      <form onSubmit={handleSubmit(onSubmit)} className="card flex flex-col gap-3 p-6 sm:flex-row sm:items-end">
         <div className="flex-1">
           <label htmlFor="code" className="label">Reference code</label>
-          <input id="code" className="input font-mono uppercase" placeholder="SEN-2026-XXXXXX"
-            value={code} onChange={(e) => setCode(e.target.value)} required />
+          <input
+            id="code"
+            className="input font-mono uppercase"
+            placeholder="SEN-2026-XXXXXX"
+            {...register('code')}
+          />
+          {errors.code && <p className="error-text">{errors.code.message}</p>}
         </div>
         <button type="submit" className="btn-primary" disabled={busy}>
-          {busy ? 'Looking up…' : 'Check status'}
+          {busy ? 'Looking up...' : 'Check status'}
         </button>
       </form>
 

@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
-import type { StepProps } from '../wizardTypes';
+import { useMemo, useState } from 'react';
+import { useFormContext, useWatch } from 'react-hook-form';
+import type { StepProps, WizardForm } from '../wizardTypes';
 import type { GroundDto } from '../../../types';
 import { InfoTooltip } from '../../../components/InfoTooltip';
 import ReactDatePicker from 'react-datepicker';
@@ -10,10 +11,24 @@ interface Props extends StepProps {
   groundsCatalog: GroundDto[];
 }
 
-export function StepWhatHappened({ form, update, groundsCatalog }: Props) {
-  const today = new Date().toISOString().slice(0, 10);
+const RHF_UPDATE = { shouldDirty: true, shouldValidate: true };
 
-  // AHRC form Part C: events older than 24 months may need an explanation for the delay.
+function fieldErrorMessage(error: unknown): string | undefined {
+  if (!error || typeof error !== 'object' || !('message' in error)) return undefined;
+  const message = (error as { message?: unknown }).message;
+  return typeof message === 'string' ? message : undefined;
+}
+
+export function StepWhatHappened({ groundsCatalog }: Props) {
+  const {
+    control,
+    register,
+    setValue,
+    formState: { errors },
+  } = useFormContext<WizardForm>();
+  const form = useWatch({ control }) as WizardForm;
+  const [dateError, setDateError] = useState(false);
+
   const delayThreshold = new Date();
   delayThreshold.setHours(0, 0, 0, 0);
   delayThreshold.setMonth(delayThreshold.getMonth() - 24);
@@ -22,56 +37,48 @@ export function StepWhatHappened({ form, update, groundsCatalog }: Props) {
   const isSelected = (value: string) => form.grounds.some((g) => g.groundType === value);
 
   function toggle(value: string) {
-    if (isSelected(value)) {
-      update({ grounds: form.grounds.filter((g) => g.groundType !== value) });
-    } else {
-      update({ grounds: [...form.grounds, { groundType: value, conditionalDetail: '' }] });
-    }
+    const next = isSelected(value)
+      ? form.grounds.filter((g) => g.groundType !== value)
+      : [...form.grounds, { groundType: value, conditionalDetail: '' }];
+    setValue('grounds', next, RHF_UPDATE);
   }
 
   function setDetail(value: string, detail: string) {
-    update({ grounds: form.grounds.map((g) => (g.groundType === value ? { ...g, conditionalDetail: detail } : g)) });
+    setValue(
+      'grounds',
+      form.grounds.map((g) => (g.groundType === value ? { ...g, conditionalDetail: detail } : g)),
+      RHF_UPDATE,
+    );
   }
 
-  const groups = groundsCatalog.reduce<Record<string, GroundDto[]>>((acc, g) => {
-    (acc[g.group] ??= []).push(g);
-    return acc;
-  }, {});
-
-  const [dateInput, setDateInput] = useState<string>(() => (form.incidentDate ? format(new Date(`${form.incidentDate}T00:00:00`), 'dd/MM/yyyy') : ''));
-  const [dateError, setDateError] = useState(false);
-
-  useEffect(() => {
-    // keep local input in sync if form value changes externally
-    setDateInput(form.incidentDate ? format(new Date(`${form.incidentDate}T00:00:00`), 'dd/MM/yyyy') : '');
-  }, [form.incidentDate]);
+  const groups = useMemo(
+    () => groundsCatalog.reduce<Record<string, GroundDto[]>>((acc, g) => {
+      (acc[g.group] ??= []).push(g);
+      return acc;
+    }, {}),
+    [groundsCatalog],
+  );
 
   function applyDateFromDate(d: Date | null) {
     if (!d) {
-      setDateInput('');
       setDateError(false);
-      update({ incidentDate: '' });
+      setValue('incidentDate', '', RHF_UPDATE);
       return;
     }
     const iso = d.toISOString().slice(0, 10);
     const longDelay = iso !== '' && new Date(`${iso}T00:00:00`) < delayThreshold;
-    setDateInput(format(d, 'dd/MM/yyyy'));
     setDateError(false);
-    update(longDelay ? { incidentDate: iso } : { incidentDate: iso, delayReason: '' });
+    setValue('incidentDate', iso, RHF_UPDATE);
+    if (!longDelay) setValue('delayReason', '', RHF_UPDATE);
   }
 
   function applyDateFromInput(input: string) {
-    // parse dd/MM/yyyy
     const parsed = parse(input, 'dd/MM/yyyy', new Date());
     if (!isValid(parsed) || isAfter(parsed, new Date())) {
       setDateError(true);
       return;
     }
-    const iso = parsed.toISOString().slice(0, 10);
-    const longDelay = iso !== '' && new Date(`${iso}T00:00:00`) < delayThreshold;
-    setDateError(false);
-    setDateInput(format(parsed, 'dd/MM/yyyy'));
-    update(longDelay ? { incidentDate: iso } : { incidentDate: iso, delayReason: '' });
+    applyDateFromDate(parsed);
   }
 
   return (
@@ -83,8 +90,14 @@ export function StepWhatHappened({ form, update, groundsCatalog }: Props) {
 
       <div>
         <label htmlFor="title" className="label">A short title for your complaint</label>
-        <input id="title" className="input" maxLength={150} value={form.title}
-          onChange={(e) => update({ title: e.target.value })} placeholder="e.g. Refused workplace adjustments" />
+        <input
+          id="title"
+          className="input"
+          maxLength={150}
+          placeholder="e.g. Refused workplace adjustments"
+          {...register('title')}
+        />
+        {errors.title && <p className="error-text">{errors.title.message}</p>}
         <p className="help">A few words so you can recognise this complaint later.</p>
       </div>
 
@@ -116,13 +129,18 @@ export function StepWhatHappened({ form, update, groundsCatalog }: Props) {
             </div>
           ))}
         </div>
+        {fieldErrorMessage(errors.grounds) && <p className="error-text">{fieldErrorMessage(errors.grounds)}</p>}
       </fieldset>
 
       <div>
         <label htmlFor="description" className="label">Describe what happened</label>
-        <textarea id="description" className="input min-h-[160px]" value={form.description}
-          onChange={(e) => update({ description: e.target.value })}
-          placeholder="What happened, where, and who was involved. There is no length limit — take the space you need." />
+        <textarea
+          id="description"
+          className="input min-h-[160px]"
+          placeholder="What happened, where, and who was involved. There is no length limit. Take the space you need."
+          {...register('description')}
+        />
+        {errors.description && <p className="error-text">{errors.description.message}</p>}
         <p className="help">{form.description.trim().length} characters (minimum 20).</p>
       </div>
 
@@ -144,19 +162,13 @@ export function StepWhatHappened({ form, update, groundsCatalog }: Props) {
               </span>
             </InfoTooltip>
           </div>
-          {/* Pop-up calendar using react-datepicker with manual-entry validation */}
           <ReactDatePicker
             id="incidentDate"
             selected={form.incidentDate ? new Date(`${form.incidentDate}T00:00:00`) : null}
             onChange={(d: Date | null) => applyDateFromDate(d)}
-            onChangeRaw={(e: React.ChangeEvent<HTMLInputElement>) => {
-              setDateInput(e.target.value);
-              setDateError(false);
-            }}
+            onChangeRaw={() => setDateError(false)}
             onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
-              // when the user leaves the input, validate typed content
               if (!e.target.value) {
-                // empty -> clear
                 applyDateFromDate(null);
                 return;
               }
@@ -164,7 +176,7 @@ export function StepWhatHappened({ form, update, groundsCatalog }: Props) {
             }}
             maxDate={new Date()}
             dateFormat="dd/MM/yyyy"
-            className={`input ${dateError ? 'datepicker-error' : ''}`}
+            className={`input ${dateError || errors.incidentDate ? 'datepicker-error' : ''}`}
             placeholderText="dd/MM/yyyy"
             shouldCloseOnSelect
             showPopperArrow={false}
@@ -173,12 +185,18 @@ export function StepWhatHappened({ form, update, groundsCatalog }: Props) {
             dropdownMode="select"
             isClearable
           />
-          {dateError && <p className="help text-red-600">Please enter a valid date (dd/mm/yyyy) on or before today.</p>}
+          {dateError && <p className="help text-red-600">Please enter a valid date (DD/MM/YYYY) on or before today.</p>}
+          {errors.incidentDate && <p className="error-text">{errors.incidentDate.message}</p>}
         </div>
         <div>
           <label htmlFor="incidentLocation" className="label">Where exactly did it happen?</label>
-          <input id="incidentLocation" className="input" value={form.incidentLocation}
-            onChange={(e) => update({ incidentLocation: e.target.value })} placeholder="e.g. Café name, street address or landmark, Suburb, State" />
+          <input
+            id="incidentLocation"
+            className="input"
+            placeholder="e.g. Cafe name, street address or landmark, Suburb, State"
+            {...register('incidentLocation')}
+          />
+          {errors.incidentLocation && <p className="error-text">{errors.incidentLocation.message}</p>}
           <p className="help">Give a specific location such as a venue name, street address or landmark.</p>
         </div>
       </div>
@@ -186,21 +204,27 @@ export function StepWhatHappened({ form, update, groundsCatalog }: Props) {
       {isLongDelay && (
         <div>
           <label htmlFor="delayReason" className="label">Reason for the delay in making this complaint</label>
-          <textarea id="delayReason" className="input min-h-[90px]" value={form.delayReason}
-            onChange={(e) => update({ delayReason: e.target.value })}
-            placeholder="The event happened more than 24 months ago. Please tell us why the complaint is being made now." />
+          <textarea
+            id="delayReason"
+            className="input min-h-[90px]"
+            placeholder="The event happened more than 24 months ago. Please tell us why the complaint is being made now."
+            {...register('delayReason')}
+          />
           <p className="help">
             The Commission may decide not to investigate complaints lodged more than 24 months after the event
-            (12 months for human-rights or ILO employment matters) — but you can explain the delay here.
+            (12 months for human-rights or ILO employment matters), but you can explain the delay here.
           </p>
         </div>
       )}
 
       <div>
         <label htmlFor="outcome" className="label">How do you think this could be resolved? (optional)</label>
-        <textarea id="outcome" className="input min-h-[90px]" value={form.desiredOutcome}
-          onChange={(e) => update({ desiredOutcome: e.target.value })}
-          placeholder="e.g. an apology, a change to a policy, training, or compensation." />
+        <textarea
+          id="outcome"
+          className="input min-h-[90px]"
+          placeholder="e.g. an apology, a change to a policy, training, or compensation."
+          {...register('desiredOutcome')}
+        />
       </div>
     </div>
   );

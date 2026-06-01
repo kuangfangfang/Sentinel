@@ -1,4 +1,7 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 import { Link, useParams } from 'react-router-dom';
 import { caseworkerApi } from '../../api/caseworker';
 import { complaintsApi } from '../../api/complaints';
@@ -9,8 +12,11 @@ import { SeverityBadge, StatusBadge } from '../../components/StatusBadge';
 import { StatusTimeline } from '../../components/StatusTimeline';
 import { formatDateOnly, formatDateTime } from '../../utils/format';
 import { allowedNextStatuses } from '../../utils/statusTransitions';
+import { caseNoteSchema, statusChangeSchema } from '../../validation/schemas';
 
 const SEVERITIES: Severity[] = ['Low', 'Medium', 'High', 'Critical'];
+type CaseNoteFormData = z.infer<typeof caseNoteSchema>;
+type StatusChangeFormData = z.infer<typeof statusChangeSchema>;
 
 export function CaseworkerComplaintDetailPage() {
   const { id } = useParams();
@@ -18,10 +24,19 @@ export function CaseworkerComplaintDetailPage() {
   const [grounds, setGrounds] = useState<GroundDto[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const [statusTarget, setStatusTarget] = useState<ComplaintStatus | ''>('');
-  const [statusNote, setStatusNote] = useState('');
-  const [noteBody, setNoteBody] = useState('');
   const [busy, setBusy] = useState(false);
+  const noteForm = useForm<CaseNoteFormData>({
+    resolver: zodResolver(caseNoteSchema),
+    defaultValues: { body: '' },
+    mode: 'onChange',
+  });
+  const statusForm = useForm<StatusChangeFormData>({
+    resolver: zodResolver(statusChangeSchema),
+    defaultValues: { statusTarget: '', statusNote: '' },
+    mode: 'onChange',
+  });
+  const noteBody = noteForm.watch('body');
+  const statusTarget = statusForm.watch('statusTarget');
 
   useEffect(() => {
     if (!id) return;
@@ -37,16 +52,18 @@ export function CaseworkerComplaintDetailPage() {
   const labelFor = (value: string) => grounds.find((g) => g.value === value)?.label ?? value;
   const nextOptions = allowedNextStatuses(c.status);
 
-  async function changeStatus(e: FormEvent) {
-    e.preventDefault();
-    if (!id || !statusTarget) return;
+  async function changeStatus(data: StatusChangeFormData) {
+    if (!id) return;
     setBusy(true);
     setError(null);
     try {
-      const updated = await caseworkerApi.changeStatus(id, statusTarget, statusNote.trim() || undefined);
+      const updated = await caseworkerApi.changeStatus(
+        id,
+        data.statusTarget as ComplaintStatus,
+        data.statusNote.trim() || undefined,
+      );
       setData(updated);
-      setStatusTarget('');
-      setStatusNote('');
+      statusForm.reset({ statusTarget: '', statusNote: '' });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not change the status.');
     } finally {
@@ -66,14 +83,13 @@ export function CaseworkerComplaintDetailPage() {
     }
   }
 
-  async function addNote(e: FormEvent) {
-    e.preventDefault();
-    if (!id || !noteBody.trim()) return;
+  async function addNote(data: CaseNoteFormData) {
+    if (!id) return;
     setBusy(true);
     try {
-      const note = await caseworkerApi.addNote(id, noteBody.trim());
+      const note = await caseworkerApi.addNote(id, data.body.trim());
       setData((prev) => (prev ? { ...prev, caseNotes: [note, ...prev.caseNotes] } : prev));
-      setNoteBody('');
+      noteForm.reset({ body: '' });
     } catch {
       setError('Could not add the note.');
     } finally {
@@ -208,15 +224,17 @@ export function CaseworkerComplaintDetailPage() {
           <section className="card p-5">
             <h2 className="font-semibold text-navy-900">Internal case notes</h2>
             <p className="text-xs text-slate-400">Visible to caseworkers only. Never shown to the complainant.</p>
-            <form onSubmit={addNote} className="mt-3 space-y-2">
+            <form onSubmit={noteForm.handleSubmit(addNote)} className="mt-3 space-y-2">
               <label htmlFor="note" className="sr-only">Add a case note</label>
               <textarea
                 id="note"
                 className="input min-h-[80px]"
-                value={noteBody}
-                onChange={(e) => setNoteBody(e.target.value)}
                 placeholder="Add an internal note"
+                {...noteForm.register('body')}
               />
+              {noteForm.formState.errors.body && (
+                <p className="error-text">{noteForm.formState.errors.body.message}</p>
+              )}
               <button type="submit" className="btn-secondary" disabled={busy || !noteBody.trim()}>Add note</button>
             </form>
             <ul className="mt-4 space-y-3">
@@ -237,22 +255,24 @@ export function CaseworkerComplaintDetailPage() {
             {nextOptions.length === 0 ? (
               <p className="text-sm text-slate-500">This complaint is in a final state.</p>
             ) : (
-              <form onSubmit={changeStatus} className="space-y-3">
+              <form onSubmit={statusForm.handleSubmit(changeStatus)} className="space-y-3">
                 <div>
                   <label htmlFor="statusTarget" className="label">New status</label>
                   <select
                     id="statusTarget"
                     className="input"
-                    value={statusTarget}
-                    onChange={(e) => setStatusTarget(e.target.value as ComplaintStatus)}
+                    {...statusForm.register('statusTarget')}
                   >
                     <option value="">Choose</option>
                     {nextOptions.map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
+                  {statusForm.formState.errors.statusTarget && (
+                    <p className="error-text">{statusForm.formState.errors.statusTarget.message}</p>
+                  )}
                 </div>
                 <div>
                   <label htmlFor="statusNote" className="label">Note (optional)</label>
-                  <input id="statusNote" className="input" value={statusNote} onChange={(e) => setStatusNote(e.target.value)} />
+                  <input id="statusNote" className="input" {...statusForm.register('statusNote')} />
                 </div>
                 <button type="submit" className="btn-primary w-full" disabled={busy || !statusTarget}>Update status</button>
               </form>

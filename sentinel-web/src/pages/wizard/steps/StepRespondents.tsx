@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Controller, useFieldArray, useFormContext, useWatch } from 'react-hook-form';
 import Combobox, { type ComboboxOption } from '../../../components/Combobox';
 import { complaintsApi } from '../../../api/complaints';
 import { ApiError } from '../../../api/client';
-import type { StepProps } from '../wizardTypes';
-import { newRespondent, type WizardRespondent } from '../wizardTypes';
+import type { StepProps, WizardForm, WizardRespondent } from '../wizardTypes';
+import { newRespondent } from '../wizardTypes';
 import {
   AUSTRALIAN_STATES,
   formatLocationLabel,
@@ -18,6 +19,8 @@ import {
   type RespondentPartyType,
 } from '../respondentIdentity';
 
+const RHF_UPDATE = { shouldDirty: true, shouldValidate: true };
+
 interface LookupState {
   tone: 'neutral' | 'success' | 'warning';
   message: string;
@@ -27,14 +30,30 @@ interface LookupState {
 interface RespondentFieldsetProps {
   respondent: WizardRespondent;
   index: number;
-  onPatch: (patch: Partial<WizardRespondent>) => void;
   onRemove: () => void;
 }
 
-function RespondentFieldset({ respondent, index, onPatch, onRemove }: RespondentFieldsetProps) {
+function fieldErrorMessage(error: unknown): string | undefined {
+  if (!error || typeof error !== 'object' || !('message' in error)) return undefined;
+  const message = (error as { message?: unknown }).message;
+  return typeof message === 'string' ? message : undefined;
+}
+
+function digitsOnly(value: unknown): string {
+  return typeof value === 'string' ? value.replace(/\D/g, '') : '';
+}
+
+function RespondentFieldset({ respondent, index, onRemove }: RespondentFieldsetProps) {
+  const {
+    control,
+    register,
+    setValue,
+    formState: { errors },
+  } = useFormContext<WizardForm>();
   const [lookup, setLookup] = useState<LookupState | null>(null);
   const abnAcn = respondent.abnAcn ?? '';
   const validation = respondent.partyType === 'organisation' ? validateAbnAcn(abnAcn) : { kind: 'empty' as const };
+  const respondentErrors = errors.respondents?.[index] ?? {};
 
   useEffect(() => {
     if (respondent.partyType !== 'organisation') {
@@ -83,10 +102,8 @@ function RespondentFieldset({ respondent, index, onPatch, onRemove }: Respondent
   }, [abnAcn, respondent.partyType]);
 
   function setPartyType(next: RespondentPartyType) {
-    onPatch({
-      partyType: next,
-      abnAcn: next === 'organisation' ? respondent.abnAcn ?? '' : null,
-    });
+    setValue(`respondents.${index}.partyType`, next, RHF_UPDATE);
+    setValue(`respondents.${index}.abnAcn`, next === 'organisation' ? respondent.abnAcn ?? '' : null, RHF_UPDATE);
     if (next === 'person') setLookup(null);
   }
 
@@ -108,6 +125,10 @@ function RespondentFieldset({ respondent, index, onPatch, onRemove }: Respondent
             ? 'text-slate-600'
             : 'text-green-700'
         : 'text-slate-500';
+
+  const abnRegistration = register(`respondents.${index}.abnAcn`, { setValueAs: normalizeAbnAcn });
+  const phoneRegistration = register(`respondents.${index}.contactPhone`, { setValueAs: digitsOnly });
+  const mobileRegistration = register(`respondents.${index}.mobile`, { setValueAs: digitsOnly });
 
   return (
     <fieldset className="rounded-lg border border-slate-200 p-4">
@@ -169,10 +190,11 @@ function RespondentFieldset({ respondent, index, onPatch, onRemove }: Respondent
           <input
             id={`r-name-${respondent.uiKey}`}
             className="input"
-            value={respondent.name}
-            onChange={(e) => onPatch({ name: e.target.value })}
-            required
+            {...register(`respondents.${index}.name`)}
           />
+          {fieldErrorMessage(respondentErrors.name) && (
+            <p className="error-text">{fieldErrorMessage(respondentErrors.name)}</p>
+          )}
         </div>
 
         {respondent.partyType === 'organisation' && (
@@ -184,11 +206,13 @@ function RespondentFieldset({ respondent, index, onPatch, onRemove }: Respondent
               inputMode="numeric"
               pattern="[0-9]*"
               maxLength={11}
-              value={abnAcn}
-              onChange={(e) => onPatch({ abnAcn: normalizeAbnAcn(e.target.value) })}
               placeholder="e.g. 12345678901 (ABN) or 123456789 (ACN)"
+              {...abnRegistration}
             />
             <p className={`mt-1 text-sm ${helperTone}`}>{helperText}</p>
+            {fieldErrorMessage(respondentErrors.abnAcn) && (
+              <p className="error-text">{fieldErrorMessage(respondentErrors.abnAcn)}</p>
+            )}
             {lookup?.entityName && validation.kind === 'valid' && validation.label === 'ABN' && (
               <p className="mt-1 text-sm font-medium text-navy-900">{lookup.entityName}</p>
             )}
@@ -200,9 +224,8 @@ function RespondentFieldset({ respondent, index, onPatch, onRemove }: Respondent
           <input
             id={`r-rel-${respondent.uiKey}`}
             className="input"
-            value={respondent.relationshipToComplainant ?? ''}
-            onChange={(e) => onPatch({ relationshipToComplainant: e.target.value })}
             placeholder="e.g. Employer, service provider"
+            {...register(`respondents.${index}.relationshipToComplainant`)}
           />
         </div>
         <div className="sm:col-span-2">
@@ -210,33 +233,23 @@ function RespondentFieldset({ respondent, index, onPatch, onRemove }: Respondent
           <input
             id={`r-address-${respondent.uiKey}`}
             className="input"
-            value={respondent.addressLine ?? ''}
-            onChange={(e) => onPatch({ addressLine: e.target.value })}
+            {...register(`respondents.${index}.addressLine`)}
           />
         </div>
         <div>
           <label htmlFor={`r-state-${respondent.uiKey}`} className="label">State/Territory</label>
-          <StateCombobox
-            id={`r-state-${respondent.uiKey}`}
-            respondent={respondent}
-            onPatch={(p) => onPatch(p)}
-          />
+          <StateCombobox index={index} respondent={respondent} />
         </div>
         <div>
           <label htmlFor={`r-suburb-${respondent.uiKey}`} className="label">Suburb</label>
-          <SuburbCombobox
-            id={`r-suburb-${respondent.uiKey}`}
-            respondent={respondent}
-            onPatch={(p) => onPatch(p)}
-          />
+          <SuburbCombobox index={index} respondent={respondent} />
         </div>
         <div>
           <label htmlFor={`r-postcode-${respondent.uiKey}`} className="label">Postcode</label>
           <input
             id={`r-postcode-${respondent.uiKey}`}
             className="input"
-            value={respondent.postcode ?? ''}
-            onChange={(e) => onPatch({ postcode: e.target.value })}
+            {...register(`respondents.${index}.postcode`)}
           />
         </div>
         <div>
@@ -245,65 +258,70 @@ function RespondentFieldset({ respondent, index, onPatch, onRemove }: Respondent
             id={`r-email-${respondent.uiKey}`}
             type="email"
             className="input"
-            value={respondent.contactEmail ?? ''}
-            onChange={(e) => onPatch({ contactEmail: e.target.value })}
+            {...register(`respondents.${index}.contactEmail`)}
           />
+          {fieldErrorMessage(respondentErrors.contactEmail) && (
+            <p className="error-text">{fieldErrorMessage(respondentErrors.contactEmail)}</p>
+          )}
         </div>
         <div>
           <label htmlFor={`r-phone-${respondent.uiKey}`} className="label">Phone (BH)</label>
           <input
             id={`r-phone-${respondent.uiKey}`}
             className="input"
-            value={respondent.contactPhone ?? ''}
-            onChange={(e) => onPatch({ contactPhone: e.target.value })}
+            inputMode="numeric"
+            pattern="[0-9]*"
+            {...phoneRegistration}
           />
+          {fieldErrorMessage(respondentErrors.contactPhone) && (
+            <p className="error-text">{fieldErrorMessage(respondentErrors.contactPhone)}</p>
+          )}
         </div>
         <div>
           <label htmlFor={`r-mobile-${respondent.uiKey}`} className="label">Mobile</label>
           <input
             id={`r-mobile-${respondent.uiKey}`}
             className="input"
-            value={respondent.mobile ?? ''}
-            onChange={(e) => onPatch({ mobile: e.target.value })}
+            inputMode="numeric"
+            pattern="[0-9]*"
+            {...mobileRegistration}
           />
+          {fieldErrorMessage(respondentErrors.mobile) && (
+            <p className="error-text">{fieldErrorMessage(respondentErrors.mobile)}</p>
+          )}
         </div>
       </div>
     </fieldset>
   );
 }
 
-function StateCombobox({
-  id,
-  respondent,
-  onPatch,
-}: {
-  id: string;
-  respondent: WizardRespondent;
-  onPatch: (p: Partial<WizardRespondent>) => void;
-}) {
+function StateCombobox({ index, respondent }: { index: number; respondent: WizardRespondent }) {
+  const { control, setValue } = useFormContext<WizardForm>();
+
   return (
-    <Combobox
-      id={id}
-      options={AUSTRALIAN_STATES}
-      value={respondent.state ?? null}
-      onChange={(val) => {
-        onPatch({ state: val ?? '', suburb: '', postcode: null });
-      }}
-      placeholder="Select state"
-      noOptionsMessage="No states"
+    <Controller
+      control={control}
+      name={`respondents.${index}.state`}
+      render={({ field }) => (
+        <Combobox
+          id={`r-state-${respondent.uiKey}`}
+          options={AUSTRALIAN_STATES}
+          value={(field.value as string | null | undefined) ?? null}
+          onChange={(val) => {
+            field.onChange(val ?? '');
+            setValue(`respondents.${index}.suburb`, '', RHF_UPDATE);
+            setValue(`respondents.${index}.postcode`, null, RHF_UPDATE);
+          }}
+          placeholder="Select state"
+          noOptionsMessage="No states"
+        />
+      )}
     />
   );
 }
 
-function SuburbCombobox({
-  id,
-  respondent,
-  onPatch,
-}: {
-  id: string;
-  respondent: WizardRespondent;
-  onPatch: (p: Partial<WizardRespondent>) => void;
-}) {
+function SuburbCombobox({ index, respondent }: { index: number; respondent: WizardRespondent }) {
+  const { setValue } = useFormContext<WizardForm>();
   const [locations, setLocations] = useState<AustralianSuburb[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -345,17 +363,20 @@ function SuburbCombobox({
 
   return (
     <Combobox
-      id={id}
+      id={`r-suburb-${respondent.uiKey}`}
       options={options}
       value={selectedValue}
       onChange={(val) => {
         if (!val) {
-          onPatch({ suburb: '', postcode: null });
+          setValue(`respondents.${index}.suburb`, '', RHF_UPDATE);
+          setValue(`respondents.${index}.postcode`, null, RHF_UPDATE);
           return;
         }
 
         const [suburb, state, postcode] = val.split('|');
-        onPatch({ suburb, state, postcode });
+        setValue(`respondents.${index}.suburb`, suburb, RHF_UPDATE);
+        setValue(`respondents.${index}.state`, state, RHF_UPDATE);
+        setValue(`respondents.${index}.postcode`, postcode, RHF_UPDATE);
       }}
       placeholder={respondent.state ? 'Search suburb or postcode' : 'Select a state first'}
       disabled={!respondent.state || loading}
@@ -364,19 +385,14 @@ function SuburbCombobox({
   );
 }
 
-export function StepRespondents({ form, update }: StepProps) {
-  function patch(index: number, p: Partial<WizardRespondent>) {
-    const next = form.respondents.map((r, i) => (i === index ? { ...r, ...p } : r));
-    update({ respondents: next });
-  }
-
-  function add() {
-    update({ respondents: [...form.respondents, newRespondent()] });
-  }
-
-  function remove(index: number) {
-    update({ respondents: form.respondents.filter((_, i) => i !== index) });
-  }
+export function StepRespondents(_props: StepProps) {
+  const { control } = useFormContext<WizardForm>();
+  const respondents = (useWatch({ control, name: 'respondents' }) ?? []) as WizardRespondent[];
+  const { append, fields, remove } = useFieldArray({
+    control,
+    name: 'respondents',
+    keyName: 'fieldKey',
+  });
 
   return (
     <div className="space-y-6">
@@ -388,18 +404,22 @@ export function StepRespondents({ form, update }: StepProps) {
       </div>
 
       <div className="space-y-5">
-        {form.respondents.map((respondent, index) => (
-          <RespondentFieldset
-            key={respondent.uiKey}
-            respondent={respondent}
-            index={index}
-            onPatch={(next) => patch(index, next)}
-            onRemove={() => remove(index)}
-          />
-        ))}
+        {fields.map((field, index) => {
+          const respondent = respondents[index] ?? (field as unknown as WizardRespondent);
+          return (
+            <RespondentFieldset
+              key={field.fieldKey}
+              respondent={respondent}
+              index={index}
+              onRemove={() => remove(index)}
+            />
+          );
+        })}
       </div>
 
-      <button type="button" className="btn-secondary" onClick={add}>+ Add another respondent</button>
+      <button type="button" className="btn-secondary" onClick={() => append(newRespondent())}>
+        + Add another respondent
+      </button>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { StepProps } from '../wizardTypes';
-import type { ComplainantContactDto, OnBehalfOfDto, RepresentativeDto } from '../../../types';
+import { Controller, useFormContext, useWatch, type FieldPath } from 'react-hook-form';
+import type { StepProps, WizardForm } from '../wizardTypes';
 import Combobox, { type ComboboxOption } from '../../../components/Combobox';
 import { OTHER_LANGUAGE_VALUE, preferredLanguageOptions } from '../../../data/languages';
 import {
@@ -18,19 +18,10 @@ const knownPreferredLanguages = new Set(
 );
 
 const TITLE_OPTIONS = ['', 'Mr', 'Mrs', 'Ms', 'Miss', 'Mx', 'Dr', 'Prof'];
+const RHF_UPDATE = { shouldDirty: true, shouldValidate: true };
 
-function titleOptions(current: string | null | undefined): string[] {
-  const value = current?.trim();
-  return value && !TITLE_OPTIONS.includes(value) ? [...TITLE_OPTIONS, value] : TITLE_OPTIONS;
-}
-
-function digitsOnly(value: string): string {
-  return value.replace(/\D/g, '');
-}
-
-interface Props extends StepProps {
-  isAuthenticated: boolean;
-}
+type AddressPrefix = 'complainantContact' | 'representative';
+type AddressField = 'addressLine' | 'suburb' | 'state' | 'postcode';
 
 interface AddressPatch {
   addressLine?: string | null;
@@ -39,28 +30,61 @@ interface AddressPatch {
   postcode?: string | null;
 }
 
-export function StepAboutYou({ form, update, isAuthenticated }: Props) {
+function titleOptions(current: string | null | undefined): string[] {
+  const value = current?.trim();
+  return value && !TITLE_OPTIONS.includes(value) ? [...TITLE_OPTIONS, value] : TITLE_OPTIONS;
+}
+
+function digitsOnly(value: unknown): string {
+  return typeof value === 'string' ? value.replace(/\D/g, '') : '';
+}
+
+function fieldErrorMessage(error: unknown): string | undefined {
+  if (!error || typeof error !== 'object' || !('message' in error)) return undefined;
+  const message = (error as { message?: unknown }).message;
+  return typeof message === 'string' ? message : undefined;
+}
+
+function addressPath(prefix: AddressPrefix, field: AddressField): FieldPath<WizardForm> {
+  return `${prefix}.${field}` as FieldPath<WizardForm>;
+}
+
+interface Props extends StepProps {
+  isAuthenticated: boolean;
+}
+
+export function StepAboutYou({ isAuthenticated }: Props) {
+  const {
+    control,
+    register,
+    setValue,
+    formState: { errors },
+  } = useFormContext<WizardForm>();
+  const form = useWatch({ control }) as WizardForm;
   const [specifyingOtherLanguage, setSpecifyingOtherLanguage] = useState(
     Boolean(form.preferredLanguage.trim()) && !knownPreferredLanguages.has(form.preferredLanguage),
   );
 
-  function patchContact(patch: Partial<ComplainantContactDto>) {
-    update({ complainantContact: { ...form.complainantContact, ...patch } });
-  }
+  useEffect(() => {
+    if (form.preferredLanguage.trim() && !knownPreferredLanguages.has(form.preferredLanguage)) {
+      setSpecifyingOtherLanguage(true);
+    }
+  }, [form.preferredLanguage]);
 
   function toggleOnBehalf(on: boolean) {
-    update({
-      onBehalfOf: on
+    setValue(
+      'onBehalfOf',
+      on
         ? { firstName: '', lastName: '', email: '', relationshipToComplainant: '', assistanceRequired: '' }
         : null,
-    });
+      RHF_UPDATE,
+    );
   }
-  function patchOnBehalf(patch: Partial<OnBehalfOfDto>) {
-    update({ onBehalfOf: { ...(form.onBehalfOf as OnBehalfOfDto), ...patch } });
-  }
+
   function toggleRep(on: boolean) {
-    update({
-      representative: on
+    setValue(
+      'representative',
+      on
         ? {
             firstName: '',
             lastName: '',
@@ -77,26 +101,47 @@ export function StepAboutYou({ form, update, isAuthenticated }: Props) {
             assistanceRequired: '',
           }
         : null,
-    });
-  }
-  function patchRep(patch: Partial<RepresentativeDto>) {
-    update({ representative: { ...(form.representative as RepresentativeDto), ...patch } });
+      RHF_UPDATE,
+    );
   }
 
   function setPreferredLanguage(value: string | null) {
     if (value === OTHER_LANGUAGE_VALUE) {
       setSpecifyingOtherLanguage(true);
-      update({ preferredLanguage: '' });
+      setValue('preferredLanguage', '', RHF_UPDATE);
       return;
     }
 
     setSpecifyingOtherLanguage(false);
-    update({ preferredLanguage: value ?? '' });
+    setValue('preferredLanguage', value ?? '', RHF_UPDATE);
   }
 
+  const contactMobile = register('complainantContact.phoneBh', { setValueAs: digitsOnly });
   const selectedLanguageValue = specifyingOtherLanguage
     ? OTHER_LANGUAGE_VALUE
     : form.preferredLanguage || null;
+
+  const contactErrors = errors.complainantContact ?? {};
+  const onBehalfErrors = errors.onBehalfOf ?? {};
+  const representativeErrors = errors.representative ?? {};
+
+  function renderRepresentativeMobile() {
+    const repMobile = register('representative.mobile', { setValueAs: digitsOnly });
+
+    return (
+      <input
+        id="rep-mobile"
+        className="input"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        {...repMobile}
+        onChange={(e) => {
+          setValue('representative.phoneBh', '', RHF_UPDATE);
+          repMobile.onChange(e);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -112,12 +157,7 @@ export function StepAboutYou({ form, update, isAuthenticated }: Props) {
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="contact-title" className="label">Title</label>
-            <select
-              id="contact-title"
-              className="input"
-              value={form.complainantContact.title ?? ''}
-              onChange={(e) => patchContact({ title: e.target.value })}
-            >
+            <select id="contact-title" className="input" {...register('complainantContact.title')}>
               {titleOptions(form.complainantContact.title).map((title) => (
                 <option key={title || 'blank'} value={title} disabled={!title}>
                   {title || 'Select title'}
@@ -129,43 +169,36 @@ export function StepAboutYou({ form, update, isAuthenticated }: Props) {
             <label htmlFor="contact-first" className="label">
               First name{isAuthenticated ? ' (required)' : ''}
             </label>
-            <input
-              id="contact-first"
-              className="input"
-              value={form.complainantContact.firstName ?? ''}
-              onChange={(e) => patchContact({ firstName: e.target.value })}
-            />
+            <input id="contact-first" className="input" {...register('complainantContact.firstName')} />
+            {fieldErrorMessage(contactErrors.firstName) && (
+              <p className="error-text">{fieldErrorMessage(contactErrors.firstName)}</p>
+            )}
           </div>
           <div>
             <label htmlFor="contact-last" className="label">
               Last name{isAuthenticated ? ' (required)' : ''}
             </label>
-            <input
-              id="contact-last"
-              className="input"
-              value={form.complainantContact.lastName ?? ''}
-              onChange={(e) => patchContact({ lastName: e.target.value })}
-            />
+            <input id="contact-last" className="input" {...register('complainantContact.lastName')} />
+            {fieldErrorMessage(contactErrors.lastName) && (
+              <p className="error-text">{fieldErrorMessage(contactErrors.lastName)}</p>
+            )}
           </div>
           <div>
             <label htmlFor="contact-email" className="label">
               Email{isAuthenticated ? ' (required)' : ''}
             </label>
-            <input
-              id="contact-email"
-              type="email"
-              className="input"
-              value={form.complainantContact.email ?? ''}
-              onChange={(e) => patchContact({ email: e.target.value })}
-            />
+            <input id="contact-email" type="email" className="input" {...register('complainantContact.email')} />
+            {fieldErrorMessage(contactErrors.email) && (
+              <p className="error-text">{fieldErrorMessage(contactErrors.email)}</p>
+            )}
           </div>
           <AddressFields
             idPrefix="contact"
+            namePrefix="complainantContact"
             addressLine={form.complainantContact.addressLine}
             suburb={form.complainantContact.suburb}
             state={form.complainantContact.state}
             postcode={form.complainantContact.postcode}
-            onPatch={patchContact}
           />
           <div>
             <label htmlFor="contact-mobile" className="label">Mobile</label>
@@ -174,17 +207,22 @@ export function StepAboutYou({ form, update, isAuthenticated }: Props) {
               className="input"
               inputMode="numeric"
               pattern="[0-9]*"
-              value={form.complainantContact.phoneBh ?? ''}
-              onChange={(e) => patchContact({ phoneBh: digitsOnly(e.target.value), phoneAh: '' })}
+              {...contactMobile}
+              onChange={(e) => {
+                setValue('complainantContact.phoneAh', '', RHF_UPDATE);
+                contactMobile.onChange(e);
+              }}
             />
+            {fieldErrorMessage(contactErrors.phoneBh) && (
+              <p className="error-text">{fieldErrorMessage(contactErrors.phoneBh)}</p>
+            )}
           </div>
           <div className="sm:col-span-2">
             <label htmlFor="contact-assist" className="label">Assistance required to participate (optional)</label>
             <textarea
               id="contact-assist"
               className="input min-h-[90px]"
-              value={form.complainantContact.assistanceRequired ?? ''}
-              onChange={(e) => patchContact({ assistanceRequired: e.target.value })}
+              {...register('complainantContact.assistanceRequired')}
             />
           </div>
         </div>
@@ -193,32 +231,35 @@ export function StepAboutYou({ form, update, isAuthenticated }: Props) {
       <fieldset className="space-y-3">
         <legend className="font-medium text-navy-900">Assistance</legend>
         <label className="flex items-start gap-3">
-          <input type="checkbox" className="mt-1 h-4 w-4" checked={form.interpreterRequired}
-            onChange={(e) => update({ interpreterRequired: e.target.checked })} />
+          <input type="checkbox" className="mt-1 h-4 w-4" {...register('interpreterRequired')} />
           <span>I need an interpreter to take part in this process.</span>
         </label>
         {form.interpreterRequired && (
           <div>
             <label htmlFor="lang" className="label">Preferred language</label>
             <div className="max-w-sm">
-              <Combobox
-                id="lang"
-                options={preferredLanguageOptions}
-                value={selectedLanguageValue}
-                onChange={setPreferredLanguage}
-                placeholder="Search preferred language"
-                noOptionsMessage="No languages"
+              <Controller
+                control={control}
+                name="preferredLanguage"
+                render={() => (
+                  <Combobox
+                    id="lang"
+                    options={preferredLanguageOptions}
+                    value={selectedLanguageValue}
+                    onChange={setPreferredLanguage}
+                    placeholder="Search preferred language"
+                    noOptionsMessage="No languages"
+                  />
+                )}
               />
             </div>
+            {fieldErrorMessage(errors.preferredLanguage) && (
+              <p className="error-text">{fieldErrorMessage(errors.preferredLanguage)}</p>
+            )}
             {specifyingOtherLanguage && (
               <div className="mt-3 max-w-sm">
                 <label htmlFor="lang-other" className="label">Please specify language</label>
-                <input
-                  id="lang-other"
-                  className="input"
-                  value={form.preferredLanguage}
-                  onChange={(e) => update({ preferredLanguage: e.target.value })}
-                />
+                <input id="lang-other" className="input" {...register('preferredLanguage')} />
               </div>
             )}
           </div>
@@ -241,28 +282,32 @@ export function StepAboutYou({ form, update, isAuthenticated }: Props) {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="ob-first" className="label">Their first name</label>
-              <input id="ob-first" className="input" value={form.onBehalfOf.firstName}
-                onChange={(e) => patchOnBehalf({ firstName: e.target.value })} />
+              <input id="ob-first" className="input" {...register('onBehalfOf.firstName')} />
+              {fieldErrorMessage(onBehalfErrors.firstName) && (
+                <p className="error-text">{fieldErrorMessage(onBehalfErrors.firstName)}</p>
+              )}
             </div>
             <div>
               <label htmlFor="ob-last" className="label">Their last name</label>
-              <input id="ob-last" className="input" value={form.onBehalfOf.lastName}
-                onChange={(e) => patchOnBehalf({ lastName: e.target.value })} />
+              <input id="ob-last" className="input" {...register('onBehalfOf.lastName')} />
+              {fieldErrorMessage(onBehalfErrors.lastName) && (
+                <p className="error-text">{fieldErrorMessage(onBehalfErrors.lastName)}</p>
+              )}
             </div>
             <div>
               <label htmlFor="ob-email" className="label">Their email</label>
-              <input id="ob-email" type="email" className="input" value={form.onBehalfOf.email ?? ''}
-                onChange={(e) => patchOnBehalf({ email: e.target.value })} />
+              <input id="ob-email" type="email" className="input" {...register('onBehalfOf.email')} />
+              {fieldErrorMessage(onBehalfErrors.email) && (
+                <p className="error-text">{fieldErrorMessage(onBehalfErrors.email)}</p>
+              )}
             </div>
             <div>
               <label htmlFor="ob-rel" className="label">Your relationship to them</label>
-              <input id="ob-rel" className="input" value={form.onBehalfOf.relationshipToComplainant ?? ''}
-                onChange={(e) => patchOnBehalf({ relationshipToComplainant: e.target.value })} />
+              <input id="ob-rel" className="input" {...register('onBehalfOf.relationshipToComplainant')} />
             </div>
             <div className="sm:col-span-2">
               <label htmlFor="ob-assist" className="label">Do they need assistance to take part? (optional)</label>
-              <textarea id="ob-assist" className="input min-h-[80px]" value={form.onBehalfOf.assistanceRequired ?? ''}
-                onChange={(e) => patchOnBehalf({ assistanceRequired: e.target.value })} />
+              <textarea id="ob-assist" className="input min-h-[80px]" {...register('onBehalfOf.assistanceRequired')} />
             </div>
           </div>
         )}
@@ -284,12 +329,7 @@ export function StepAboutYou({ form, update, isAuthenticated }: Props) {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="rep-title" className="label">Title</label>
-              <select
-                id="rep-title"
-                className="input"
-                value={form.representative.title ?? ''}
-                onChange={(e) => patchRep({ title: e.target.value })}
-              >
+              <select id="rep-title" className="input" {...register('representative.title')}>
                 {titleOptions(form.representative.title).map((title) => (
                   <option key={title || 'blank'} value={title} disabled={!title}>
                     {title || 'Select title'}
@@ -299,52 +339,51 @@ export function StepAboutYou({ form, update, isAuthenticated }: Props) {
             </div>
             <div>
               <label htmlFor="rep-first" className="label">First name</label>
-              <input id="rep-first" className="input" value={form.representative.firstName}
-                onChange={(e) => patchRep({ firstName: e.target.value })} />
+              <input id="rep-first" className="input" {...register('representative.firstName')} />
+              {fieldErrorMessage(representativeErrors.firstName) && (
+                <p className="error-text">{fieldErrorMessage(representativeErrors.firstName)}</p>
+              )}
             </div>
             <div>
               <label htmlFor="rep-last" className="label">Last name</label>
-              <input id="rep-last" className="input" value={form.representative.lastName}
-                onChange={(e) => patchRep({ lastName: e.target.value })} />
+              <input id="rep-last" className="input" {...register('representative.lastName')} />
+              {fieldErrorMessage(representativeErrors.lastName) && (
+                <p className="error-text">{fieldErrorMessage(representativeErrors.lastName)}</p>
+              )}
             </div>
             <div>
               <label htmlFor="rep-position" className="label">Position</label>
-              <input id="rep-position" className="input" value={form.representative.position ?? ''}
-                onChange={(e) => patchRep({ position: e.target.value })} />
+              <input id="rep-position" className="input" {...register('representative.position')} />
             </div>
             <div>
               <label htmlFor="rep-org" className="label">Organisation (optional)</label>
-              <input id="rep-org" className="input" value={form.representative.organisation ?? ''}
-                onChange={(e) => patchRep({ organisation: e.target.value })} />
+              <input id="rep-org" className="input" {...register('representative.organisation')} />
             </div>
             <AddressFields
               idPrefix="rep"
+              namePrefix="representative"
               addressLine={form.representative.addressLine}
               suburb={form.representative.suburb}
               state={form.representative.state}
               postcode={form.representative.postcode}
-              onPatch={patchRep}
             />
             <div>
               <label htmlFor="rep-email" className="label">Email (optional)</label>
-              <input id="rep-email" type="email" className="input" value={form.representative.email ?? ''}
-                onChange={(e) => patchRep({ email: e.target.value })} />
+              <input id="rep-email" type="email" className="input" {...register('representative.email')} />
+              {fieldErrorMessage(representativeErrors.email) && (
+                <p className="error-text">{fieldErrorMessage(representativeErrors.email)}</p>
+              )}
             </div>
             <div>
               <label htmlFor="rep-mobile" className="label">Mobile</label>
-              <input
-                id="rep-mobile"
-                className="input"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={form.representative.mobile ?? ''}
-                onChange={(e) => patchRep({ mobile: digitsOnly(e.target.value), phoneBh: '' })}
-              />
+              {renderRepresentativeMobile()}
+              {fieldErrorMessage(representativeErrors.mobile) && (
+                <p className="error-text">{fieldErrorMessage(representativeErrors.mobile)}</p>
+              )}
             </div>
             <div className="sm:col-span-2">
               <label htmlFor="rep-assist" className="label">Assistance required to participate (optional)</label>
-              <textarea id="rep-assist" className="input min-h-[80px]" value={form.representative.assistanceRequired ?? ''}
-                onChange={(e) => patchRep({ assistanceRequired: e.target.value })} />
+              <textarea id="rep-assist" className="input min-h-[80px]" {...register('representative.assistanceRequired')} />
             </div>
           </div>
         )}
@@ -355,19 +394,27 @@ export function StepAboutYou({ form, update, isAuthenticated }: Props) {
 
 function AddressFields({
   idPrefix,
+  namePrefix,
   addressLine,
   suburb,
   state,
   postcode,
-  onPatch,
 }: {
   idPrefix: string;
+  namePrefix: AddressPrefix;
   addressLine?: string | null;
   suburb?: string | null;
   state?: string | null;
   postcode?: string | null;
-  onPatch: (patch: AddressPatch) => void;
 }) {
+  const { control, register, setValue } = useFormContext<WizardForm>();
+
+  function patchAddress(patch: AddressPatch) {
+    (Object.entries(patch) as Array<[AddressField, string | null | undefined]>).forEach(([field, value]) => {
+      setValue(addressPath(namePrefix, field), value ?? '', RHF_UPDATE);
+    });
+  }
+
   return (
     <>
       <div className="sm:col-span-2">
@@ -375,19 +422,28 @@ function AddressFields({
         <input
           id={`${idPrefix}-address`}
           className="input"
-          value={addressLine ?? ''}
-          onChange={(e) => onPatch({ addressLine: e.target.value })}
+          {...register(addressPath(namePrefix, 'addressLine'))}
         />
       </div>
       <div>
         <label htmlFor={`${idPrefix}-state`} className="label">State/Territory</label>
-        <Combobox
-          id={`${idPrefix}-state`}
-          options={AUSTRALIAN_STATES}
-          value={state ?? null}
-          onChange={(val) => onPatch({ state: val ?? '', suburb: '', postcode: '' })}
-          placeholder="Select state"
-          noOptionsMessage="No states"
+        <Controller
+          control={control}
+          name={addressPath(namePrefix, 'state')}
+          render={({ field }) => (
+            <Combobox
+              id={`${idPrefix}-state`}
+              options={AUSTRALIAN_STATES}
+              value={(field.value as string | null | undefined) ?? null}
+              onChange={(val) => {
+                field.onChange(val ?? '');
+                setValue(addressPath(namePrefix, 'suburb'), '', RHF_UPDATE);
+                setValue(addressPath(namePrefix, 'postcode'), '', RHF_UPDATE);
+              }}
+              placeholder="Select state"
+              noOptionsMessage="No states"
+            />
+          )}
         />
       </div>
       <div>
@@ -397,7 +453,7 @@ function AddressFields({
           state={state ?? ''}
           suburb={suburb ?? ''}
           postcode={postcode ?? ''}
-          onPatch={onPatch}
+          onPatch={patchAddress}
         />
       </div>
       <div>
@@ -405,8 +461,7 @@ function AddressFields({
         <input
           id={`${idPrefix}-postcode`}
           className="input"
-          value={postcode ?? ''}
-          onChange={(e) => onPatch({ postcode: e.target.value })}
+          {...register(addressPath(namePrefix, 'postcode'))}
         />
       </div>
     </>

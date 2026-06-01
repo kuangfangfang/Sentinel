@@ -9,11 +9,11 @@ export type AbnAcnValidationResult =
 const ABN_WEIGHTS = [10, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19];
 const ACN_WEIGHTS = [8, 7, 6, 5, 4, 3, 2, 1];
 
-export function digitsOnly(value: string): string {
-  return value.replace(/\D/g, '');
+export function digitsOnly(value: unknown): string {
+  return typeof value === 'string' ? value.replace(/\D/g, '') : '';
 }
 
-export function normalizeAbnAcn(value: string): string {
+export function normalizeAbnAcn(value: unknown): string {
   return digitsOnly(value).slice(0, 11);
 }
 

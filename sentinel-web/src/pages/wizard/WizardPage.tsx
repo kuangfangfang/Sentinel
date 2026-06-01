@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { FormProvider, useForm, useWatch, type FieldErrors, type Path, type Resolver } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { complaintsApi } from '../../api/complaints';
@@ -12,7 +14,23 @@ import { StepRespondents } from './steps/StepRespondents';
 import { StepWhatHappened } from './steps/StepWhatHappened';
 import { StepSupporting } from './steps/StepSupporting';
 import { StepReview } from './steps/StepReview';
-import { validateAbnAcn } from './respondentIdentity';
+import { createWizardSchema } from '../../validation/schemas';
+
+const STEP_FIELDS: Record<number, Array<Path<WizardForm>>> = {
+  1: ['complainantContact', 'interpreterRequired', 'preferredLanguage', 'onBehalfOf', 'representative'],
+  2: ['respondents'],
+  3: ['title', 'grounds', 'description', 'incidentDate', 'incidentLocation', 'delayReason', 'desiredOutcome'],
+  4: [
+    'priorComplaintMade',
+    'priorComplaintAgency',
+    'priorComplaintDate',
+    'priorComplaintStatus',
+    'priorComplaintFinalisedDate',
+    'priorComplaintOutcome',
+    'referringOrganisation',
+  ],
+  5: ['genAiUsed', 'privacyNoticeAccepted'],
+};
 
 export function WizardPage() {
   const { draftId: draftIdParam } = useParams();
@@ -20,11 +38,19 @@ export function WizardPage() {
   const navigate = useNavigate();
 
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState<WizardForm>(emptyForm());
+  const wizardSchema = useMemo(() => createWizardSchema({ isAuthenticated, step }), [isAuthenticated, step]);
+  const methods = useForm<WizardForm>({
+    resolver: zodResolver(wizardSchema) as Resolver<WizardForm>,
+    defaultValues: emptyForm(),
+    mode: 'onChange',
+  });
+  const { control, formState, getValues, reset, trigger } = methods;
+  const form = useWatch({ control }) as WizardForm;
+
   const [serverDraftId, setServerDraftId] = useState<string | null>(draftIdParam ?? null);
   const [grounds, setGrounds] = useState<GroundDto[]>([]);
   const [loading, setLoading] = useState(Boolean(draftIdParam));
-  const [errors, setErrors] = useState<string[]>([]);
+  const [serverErrors, setServerErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -35,22 +61,26 @@ export function WizardPage() {
   useEffect(() => {
     if (!isAuthenticated || !user || draftIdParam) return;
 
-    setForm((prev) => {
-      if (prev.complainantContact.firstName || prev.complainantContact.lastName || prev.complainantContact.email)
-        return prev;
+    const current = getValues();
+    if (
+      current.complainantContact.firstName ||
+      current.complainantContact.lastName ||
+      current.complainantContact.email
+    ) {
+      return;
+    }
 
-      const parts = user.fullName.trim().split(/\s+/).filter(Boolean);
-      return {
-        ...prev,
-        complainantContact: {
-          ...prev.complainantContact,
-          firstName: parts[0] ?? '',
-          lastName: parts.slice(1).join(' '),
-          email: user.email,
-        },
-      };
+    const parts = user.fullName.trim().split(/\s+/).filter(Boolean);
+    reset({
+      ...current,
+      complainantContact: {
+        ...current.complainantContact,
+        firstName: parts[0] ?? '',
+        lastName: parts.slice(1).join(' '),
+        email: user.email,
+      },
     });
-  }, [draftIdParam, isAuthenticated, user]);
+  }, [draftIdParam, getValues, isAuthenticated, reset, user]);
 
   useEffect(() => {
     if (!draftIdParam) return;
@@ -60,56 +90,19 @@ export function WizardPage() {
       .detail(draftIdParam)
       .then((detail) => {
         if (!active) return;
-        setForm(fromDetail(detail));
+        reset(fromDetail(detail));
         setStep(Math.min(Math.max(detail.wizardStep, 1), 5));
       })
-      .catch(() => setErrors(['Could not load this draft.']))
+      .catch(() => setServerErrors(['Could not load this draft.']))
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
     };
-  }, [draftIdParam]);
+  }, [draftIdParam, reset]);
 
-  const update = (patch: Partial<WizardForm>) => setForm((prev) => ({ ...prev, ...patch }));
-
-  function validateStep(target: number): string[] {
-    const e: string[] = [];
-    if (target === 1) {
-      if (isAuthenticated) {
-        if (!form.complainantContact.firstName?.trim()) e.push('Please provide your first name.');
-        if (!form.complainantContact.lastName?.trim()) e.push('Please provide your last name.');
-        if (!form.complainantContact.email?.trim()) e.push('Please provide your email address.');
-      }
-      if (form.onBehalfOf && (!form.onBehalfOf.firstName.trim() || !form.onBehalfOf.lastName.trim()))
-        e.push('Please give the first and last name of the person you are complaining for.');
-      if (form.representative && (!form.representative.firstName.trim() || !form.representative.lastName.trim()))
-        e.push('Please give the first and last name of your representative.');
-      if (form.interpreterRequired && !form.preferredLanguage.trim())
-        e.push('Please tell us your preferred language for an interpreter.');
-    }
-    if (target === 2) {
-      if (!form.respondents.some((r) => r.name.trim()))
-        e.push('Add at least one person or organisation the complaint is about.');
-      form.respondents.forEach((respondent, index) => {
-        if (respondent.partyType !== 'organisation' || !respondent.abnAcn?.trim()) return;
-        const result = validateAbnAcn(respondent.abnAcn);
-        if (result.kind === 'invalid' || result.kind === 'incomplete')
-          e.push(`Respondent ${index + 1}: ${result.message}`);
-      });
-    }
-    if (target === 3) {
-      if (form.title.trim().length < 5) e.push('Give your complaint a short title (at least 5 characters).');
-      if (form.grounds.length === 0) e.push('Select at least one ground of complaint.');
-      if (form.description.trim().length < 20) e.push('Describe what happened in at least 20 characters.');
-      if (!form.incidentDate) e.push('Enter the date the event happened.');
-      else if (form.incidentDate > new Date().toISOString().slice(0, 10)) e.push('The incident date cannot be in the future.');
-      if (!form.incidentLocation.trim()) e.push('Enter where exactly it happened.');
-    }
-    if (target === 5) {
-      if (form.genAiUsed === null) e.push('Please answer whether generative AI was used to prepare this complaint.');
-      if (!form.privacyNoticeAccepted) e.push('You must confirm you have read the privacy notice before lodging.');
-    }
-    return e;
+  async function triggerStepValidation(target: number): Promise<boolean> {
+    setServerErrors([]);
+    return trigger(STEP_FIELDS[target] ?? undefined, { shouldFocus: true });
   }
 
   async function ensureDraftId(): Promise<string | null> {
@@ -121,11 +114,11 @@ export function WizardPage() {
   }
 
   async function persistDraft(currentStep: number) {
-    if (!isAuthenticated) return; // anonymous complaints aren't persisted until final submit
+    if (!isAuthenticated) return;
     try {
       setSaving(true);
       const id = await ensureDraftId();
-      if (id) await complaintsApi.saveDraft(id, toWriteDto(form, currentStep));
+      if (id) await complaintsApi.saveDraft(id, toWriteDto(getValues(), currentStep));
     } catch {
       /* draft save is best-effort; data stays in the form */
     } finally {
@@ -134,19 +127,19 @@ export function WizardPage() {
   }
 
   async function goNext() {
-    const stepErrors = validateStep(step);
-    setErrors(stepErrors);
-    if (stepErrors.length) {
+    const isValid = await triggerStepValidation(step);
+    if (!isValid) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
+
     await persistDraft(Math.min(step + 1, 5));
     setStep((s) => Math.min(s + 1, 5));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function goBack() {
-    setErrors([]);
+    setServerErrors([]);
     setStep((s) => Math.max(s - 1, 1));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -157,15 +150,17 @@ export function WizardPage() {
   }
 
   async function submit() {
-    const allErrors = [...validateStep(1), ...validateStep(2), ...validateStep(3), ...validateStep(5)];
-    setErrors(allErrors);
-    if (allErrors.length) {
+    setServerErrors([]);
+    const parsed = createWizardSchema({ isAuthenticated, validateAll: true }).safeParse(getValues());
+    if (!parsed.success) {
+      setServerErrors([...new Set(parsed.error.issues.map((issue) => issue.message))]);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
+
     setSubmitting(true);
     try {
-      const payload = toWriteDto(form, 5);
+      const payload = toWriteDto(parsed.data as WizardForm, 5);
       const result = isAuthenticated
         ? await complaintsApi.submit((await ensureDraftId())!, payload)
         : await complaintsApi.submitAnonymous(payload);
@@ -174,7 +169,13 @@ export function WizardPage() {
         replace: true,
       });
     } catch (err) {
-      setErrors(err instanceof ApiError ? (err.fieldMessages.length ? err.fieldMessages : [err.message]) : ['Could not lodge your complaint. Please try again.']);
+      setServerErrors(
+        err instanceof ApiError
+          ? err.fieldMessages.length
+            ? err.fieldMessages
+            : [err.message]
+          : ['Could not lodge your complaint. Please try again.'],
+      );
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setSubmitting(false);
@@ -182,16 +183,18 @@ export function WizardPage() {
   }
 
   const heading = useMemo(() => WIZARD_STEPS.find((s) => s.number === step)?.title ?? '', [step]);
+  const clientErrors = useMemo(() => collectErrorMessages(formState.errors), [formState.errors]);
+  const errors = [...clientErrors, ...serverErrors];
 
-  if (loading) return <Spinner label="Loading your draft…" />;
+  if (loading) return <Spinner label="Loading your draft..." />;
 
   return (
     <div className="mx-auto max-w-3xl">
       <h1 className="text-2xl font-bold">Lodge a complaint</h1>
       {!isAuthenticated && (
         <div className="card mt-3 border-accent-200 bg-accent-50 p-4 text-sm text-accent-900" role="note">
-          You are reporting <strong>anonymously</strong>. Your complaint won’t be linked to an account, so be sure
-          to save the reference code shown at the end — it is the only way to track your complaint.
+          You are reporting <strong>anonymously</strong>. Your complaint will not be linked to an account, so be sure
+          to save the reference code shown at the end. It is the only way to track your complaint.
         </div>
       )}
 
@@ -203,36 +206,38 @@ export function WizardPage() {
         <div className="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-700" role="alert" aria-live="assertive">
           <p className="font-semibold">Please fix the following:</p>
           <ul className="mt-1 list-disc pl-5">
-            {errors.map((msg, i) => <li key={i}>{msg}</li>)}
+            {errors.map((msg, i) => <li key={`${msg}-${i}`}>{msg}</li>)}
           </ul>
         </div>
       )}
 
-      <section className="card p-6" aria-label={`Step ${step}: ${heading}`}>
-        {step === 1 && <StepAboutYou form={form} update={update} errors={errors} isAuthenticated={isAuthenticated} />}
-        {step === 2 && <StepRespondents form={form} update={update} errors={errors} />}
-        {step === 3 && <StepWhatHappened form={form} update={update} errors={errors} groundsCatalog={grounds} />}
-        {step === 4 && <StepSupporting form={form} update={update} errors={errors} draftId={serverDraftId} isAuthenticated={isAuthenticated} />}
-        {step === 5 && <StepReview form={form} update={update} errors={errors} groundsCatalog={grounds} />}
-      </section>
+      <FormProvider {...methods}>
+        <section className="card p-6" aria-label={`Step ${step}: ${heading}`}>
+          {step === 1 && <StepAboutYou isAuthenticated={isAuthenticated} />}
+          {step === 2 && <StepRespondents />}
+          {step === 3 && <StepWhatHappened groundsCatalog={grounds} />}
+          {step === 4 && <StepSupporting draftId={serverDraftId} isAuthenticated={isAuthenticated} />}
+          {step === 5 && <StepReview groundsCatalog={grounds} />}
+        </section>
+      </FormProvider>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           {step > 1 && (
             <button type="button" className="btn-secondary" onClick={goBack} disabled={submitting}>
-              ← Back
+              Back
             </button>
           )}
         </div>
         <div className="flex flex-col gap-3 sm:flex-row">
           {isAuthenticated && (
             <button type="button" className="btn-ghost" onClick={saveAndExit} disabled={saving || submitting}>
-              {saving ? 'Saving…' : 'Save & finish later'}
+              {saving ? 'Saving...' : 'Save & finish later'}
             </button>
           )}
           {step < 5 ? (
             <button type="button" className="btn-primary" onClick={goNext} disabled={saving}>
-              Save & continue →
+              Save & continue
             </button>
           ) : (
             <button
@@ -243,11 +248,30 @@ export function WizardPage() {
               aria-disabled={!form.privacyNoticeAccepted}
               title={form.privacyNoticeAccepted ? undefined : 'Please tick the privacy collection notice box above to enable.'}
             >
-              {submitting ? 'Lodging…' : 'Lodge complaint'}
+              {submitting ? 'Lodging...' : 'Lodge complaint'}
             </button>
           )}
         </div>
       </div>
     </div>
   );
+}
+
+function collectErrorMessages(errors: FieldErrors<WizardForm>): string[] {
+  const messages: string[] = [];
+
+  function visit(value: unknown) {
+    if (!value || typeof value !== 'object') return;
+
+    const maybeError = value as { message?: unknown };
+    if (typeof maybeError.message === 'string') messages.push(maybeError.message);
+
+    Object.entries(value as Record<string, unknown>).forEach(([key, child]) => {
+      if (key === 'message' || key === 'type' || key === 'ref') return;
+      visit(child);
+    });
+  }
+
+  visit(errors);
+  return [...new Set(messages)];
 }

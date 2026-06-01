@@ -1,6 +1,7 @@
 import { ChangeEvent, FocusEvent, useEffect, useState } from 'react';
+import { useFormContext, useWatch } from 'react-hook-form';
 import { Link } from 'react-router-dom';
-import type { StepProps } from '../wizardTypes';
+import type { StepProps, WizardForm } from '../wizardTypes';
 import type { AttachmentDto } from '../../../types';
 import { complaintsApi } from '../../../api/complaints';
 import { ApiError } from '../../../api/client';
@@ -13,7 +14,11 @@ interface Props extends StepProps {
   isAuthenticated: boolean;
 }
 
-export function StepSupporting({ form, update, draftId, isAuthenticated }: Props) {
+const RHF_UPDATE = { shouldDirty: true, shouldValidate: true };
+
+export function StepSupporting({ draftId, isAuthenticated }: Props) {
+  const { register, setValue, control } = useFormContext<WizardForm>();
+  const form = useWatch({ control }) as WizardForm;
   const [attachments, setAttachments] = useState<AttachmentDto[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,24 +47,24 @@ export function StepSupporting({ form, update, draftId, isAuthenticated }: Props
   }
 
   function setPriorComplaintMade(value: boolean) {
-    update({
-      priorComplaintMade: value,
-      priorComplaintAgency: value ? form.priorComplaintAgency : '',
-      priorComplaintDate: value ? form.priorComplaintDate : '',
-      priorComplaintStatus: value ? form.priorComplaintStatus : '',
-      priorComplaintFinalisedDate: value ? form.priorComplaintFinalisedDate : '',
-      priorComplaintOutcome: value ? form.priorComplaintOutcome : '',
-    });
+    setValue('priorComplaintMade', value, RHF_UPDATE);
+    if (!value) {
+      setValue('priorComplaintAgency', '', RHF_UPDATE);
+      setValue('priorComplaintDate', '', RHF_UPDATE);
+      setValue('priorComplaintStatus', '', RHF_UPDATE);
+      setValue('priorComplaintFinalisedDate', '', RHF_UPDATE);
+      setValue('priorComplaintOutcome', '', RHF_UPDATE);
+    }
   }
 
   function applyPriorComplaintDate(date: Date | null) {
     setPriorComplaintDateError(false);
-    update({ priorComplaintDate: date ? toIsoDate(date) : '' });
+    setValue('priorComplaintDate', date ? toIsoDate(date) : '', RHF_UPDATE);
   }
 
   function applyPriorComplaintFinalisedDate(date: Date | null) {
     setPriorComplaintFinalisedDateError(false);
-    update({ priorComplaintFinalisedDate: date ? toIsoDate(date) : '' });
+    setValue('priorComplaintFinalisedDate', date ? toIsoDate(date) : '', RHF_UPDATE);
   }
 
   function applyPriorComplaintDateInput(value: string) {
@@ -69,8 +74,7 @@ export function StepSupporting({ form, update, draftId, isAuthenticated }: Props
       return;
     }
 
-    setPriorComplaintDateError(false);
-    update({ priorComplaintDate: toIsoDate(parsed) });
+    applyPriorComplaintDate(parsed);
   }
 
   function applyPriorComplaintFinalisedDateInput(value: string) {
@@ -80,8 +84,7 @@ export function StepSupporting({ form, update, draftId, isAuthenticated }: Props
       return;
     }
 
-    setPriorComplaintFinalisedDateError(false);
-    update({ priorComplaintFinalisedDate: toIsoDate(parsed) });
+    applyPriorComplaintFinalisedDate(parsed);
   }
 
   function handlePriorComplaintDateBlur(e: FocusEvent<HTMLInputElement>) {
@@ -113,7 +116,7 @@ export function StepSupporting({ form, update, draftId, isAuthenticated }: Props
           <>
             <p className="text-sm text-slate-600">Accepted: PDF, JPG, PNG or DOCX, up to 10 MB each.</p>
             <label className="btn-secondary cursor-pointer">
-              {uploading ? 'Uploading…' : 'Choose a file'}
+              {uploading ? 'Uploading...' : 'Choose a file'}
               <input type="file" className="sr-only" accept=".pdf,.jpg,.jpeg,.png,.docx" onChange={onFile} disabled={uploading || !draftId} />
             </label>
             {error && <p className="error-text">{error}</p>}
@@ -170,9 +173,8 @@ export function StepSupporting({ form, update, draftId, isAuthenticated }: Props
               <input
                 id="priorComplaintAgency"
                 className="input"
-                value={form.priorComplaintAgency}
-                onChange={(e) => update({ priorComplaintAgency: e.target.value })}
                 placeholder="e.g. Fair Work Commission"
+                {...register('priorComplaintAgency')}
               />
             </div>
             <div>
@@ -181,9 +183,7 @@ export function StepSupporting({ form, update, draftId, isAuthenticated }: Props
                 id="priorComplaintDate"
                 selected={form.priorComplaintDate ? new Date(`${form.priorComplaintDate}T00:00:00`) : null}
                 onChange={(date: Date | null) => applyPriorComplaintDate(date)}
-                onChangeRaw={(e: ChangeEvent<HTMLInputElement>) => {
-                  setPriorComplaintDateError(false);
-                }}
+                onChangeRaw={() => setPriorComplaintDateError(false)}
                 onBlur={handlePriorComplaintDateBlur}
                 maxDate={new Date()}
                 dateFormat="dd/MM/yyyy"
@@ -196,16 +196,11 @@ export function StepSupporting({ form, update, draftId, isAuthenticated }: Props
                 dropdownMode="select"
                 isClearable
               />
-              {priorComplaintDateError && <p className="help text-red-600">Please enter a valid date (dd/mm/yyyy) on or before today.</p>}
+              {priorComplaintDateError && <p className="help text-red-600">Please enter a valid date (DD/MM/YYYY) on or before today.</p>}
             </div>
             <div>
               <label htmlFor="priorComplaintStatus" className="label">Status of complaint</label>
-              <select
-                id="priorComplaintStatus"
-                className="input"
-                value={form.priorComplaintStatus}
-                onChange={(e) => update({ priorComplaintStatus: e.target.value })}
-              >
+              <select id="priorComplaintStatus" className="input" {...register('priorComplaintStatus')}>
                 <option value="">Select status</option>
                 <option value="In progress">In progress</option>
                 <option value="Finalised">Finalised</option>
@@ -218,9 +213,7 @@ export function StepSupporting({ form, update, draftId, isAuthenticated }: Props
                 id="priorComplaintFinalisedDate"
                 selected={form.priorComplaintFinalisedDate ? new Date(`${form.priorComplaintFinalisedDate}T00:00:00`) : null}
                 onChange={(date: Date | null) => applyPriorComplaintFinalisedDate(date)}
-                onChangeRaw={(e: ChangeEvent<HTMLInputElement>) => {
-                  setPriorComplaintFinalisedDateError(false);
-                }}
+                onChangeRaw={() => setPriorComplaintFinalisedDateError(false)}
                 onBlur={handlePriorComplaintFinalisedDateBlur}
                 maxDate={new Date()}
                 dateFormat="dd/MM/yyyy"
@@ -233,16 +226,15 @@ export function StepSupporting({ form, update, draftId, isAuthenticated }: Props
                 dropdownMode="select"
                 isClearable
               />
-              {priorComplaintFinalisedDateError && <p className="help text-red-600">Please enter a valid date (dd/mm/yyyy) on or before today.</p>}
+              {priorComplaintFinalisedDateError && <p className="help text-red-600">Please enter a valid date (DD/MM/YYYY) on or before today.</p>}
             </div>
             <div className="sm:col-span-2">
               <label htmlFor="priorComplaintOutcome" className="label">Outcome of complaint (optional)</label>
               <textarea
                 id="priorComplaintOutcome"
                 className="input min-h-[90px]"
-                value={form.priorComplaintOutcome}
-                onChange={(e) => update({ priorComplaintOutcome: e.target.value })}
                 placeholder="Tell us what happened with that complaint, if known."
+                {...register('priorComplaintOutcome')}
               />
             </div>
           </div>
@@ -251,8 +243,7 @@ export function StepSupporting({ form, update, draftId, isAuthenticated }: Props
 
       <div>
         <label htmlFor="refOrg" className="label">Were you referred here by another organisation? (optional)</label>
-        <input id="refOrg" className="input" value={form.referringOrganisation}
-          onChange={(e) => update({ referringOrganisation: e.target.value })} placeholder="Name of the organisation" />
+        <input id="refOrg" className="input" placeholder="Name of the organisation" {...register('referringOrganisation')} />
       </div>
     </div>
   );
