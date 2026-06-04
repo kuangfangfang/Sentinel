@@ -61,7 +61,7 @@ const validWizard = {
   preferredLanguage: '',
   genAiUsed: false,
   privacyNoticeAccepted: true,
-  grounds: [{ groundType: 'Disability', conditionalDetail: '' }],
+  grounds: [{ groundType: 'Disability', conditionalDetail: 'Mobility impairment' }],
   respondents: [{
     uiKey: 'respondent-1',
     partyType: 'person',
@@ -138,7 +138,6 @@ const onBehalfRequiredCases: Array<{
   { label: 'on behalf last name is required', path: 'onBehalfOf.lastName', mutate: (data) => { data.onBehalfOf.lastName = ''; } },
   { label: 'on behalf email is required', path: 'onBehalfOf.email', mutate: (data) => { data.onBehalfOf.email = ''; } },
   { label: 'on behalf relationship is required', path: 'onBehalfOf.relationshipToComplainant', mutate: (data) => { data.onBehalfOf.relationshipToComplainant = ''; } },
-  { label: 'on behalf assistance details are required', path: 'onBehalfOf.assistanceRequired', mutate: (data) => { data.onBehalfOf.assistanceRequired = ''; } },
 ];
 
 for (const testCase of onBehalfRequiredCases) {
@@ -180,7 +179,6 @@ const representativeRequiredCases: Array<{
   { label: 'representative postcode is required', path: 'representative.postcode', mutate: (data) => { data.representative.postcode = ''; } },
   { label: 'representative email is required', path: 'representative.email', mutate: (data) => { data.representative.email = ''; } },
   { label: 'representative mobile is required', path: 'representative.mobile', mutate: (data) => { data.representative.mobile = ''; } },
-  { label: 'representative assistance details are required', path: 'representative.assistanceRequired', mutate: (data) => { data.representative.assistanceRequired = ''; } },
 ];
 
 for (const testCase of representativeRequiredCases) {
@@ -188,6 +186,18 @@ for (const testCase of representativeRequiredCases) {
   data.representative = { ...completeRepresentative };
   testCase.mutate(data);
   assertInvalid(anonymousStepOneSchema.safeParse(data), testCase.path, testCase.label);
+}
+
+{
+  const data = clone(validWizard);
+  data.onBehalfOf = { ...completeOnBehalfOf, assistanceRequired: '' };
+  assert(anonymousStepOneSchema.safeParse(data).success, 'on behalf assistance details are optional');
+}
+
+{
+  const data = clone(validWizard);
+  data.representative = { ...completeRepresentative, assistanceRequired: '' };
+  assert(anonymousStepOneSchema.safeParse(data).success, 'representative assistance details are optional');
 }
 
 const stepTwoRequiredCases: Array<{
@@ -258,6 +268,32 @@ for (const testCase of stepTwoRequiredCases) {
   const data = clone(validWizard);
   data.respondents[0].contactPhone = '041';
   assertInvalid(stepTwoSchema.safeParse(data), 'respondents.0.contactPhone', 'respondent phone validates format when provided');
+}
+
+{
+  const data = clone(validWizard);
+  data.incidentDate = '2023-01-01';
+  data.delayReason = '';
+  assertInvalid(stepThreeSchema.safeParse(data), 'delayReason', 'delay reason is required when incident date is more than 24 months ago');
+}
+
+{
+  const data = clone(validWizard);
+  data.incidentDate = '2023-01-01';
+  data.delayReason = 'I only recently understood I could lodge a complaint.';
+  assert(stepThreeSchema.safeParse(data).success, 'delay reason passes when incident date is more than 24 months ago and reason is provided');
+}
+
+{
+  const data = clone(validWizard);
+  data.grounds = [{ groundType: 'Age', conditionalDetail: '' }];
+  assertInvalid(stepThreeSchema.safeParse(data), 'grounds.0.conditionalDetail', 'ground detail is required when a selected ground asks a follow-up question');
+}
+
+{
+  const data = clone(validWizard);
+  data.grounds = [{ groundType: 'Age', conditionalDetail: '42' }];
+  assert(stepThreeSchema.safeParse(data).success, 'ground detail passes when a selected ground asks a follow-up question and detail is provided');
 }
 
 const stepFourRequiredCases: Array<{

@@ -14,6 +14,21 @@ const optionalLimitedTextSchema = (label: string, max: number) =>
     message: maxLengthMessage(label, max),
   });
 
+const groundsRequiringDetail = new Set([
+  'Age',
+  'Disability',
+  'AssociationWithDisability',
+  'Sex',
+  'MaritalOrRelationshipStatus',
+  'SexualOrientation',
+  'GenderIdentity',
+  'Race',
+  'RacialHatred',
+  'EmploymentCriminalRecord',
+  'EmploymentReligion',
+  'EmploymentPoliticalOpinion',
+]);
+
 export const australianMobileSchema = z
   .string()
   .min(1, 'Mobile number is required')
@@ -187,6 +202,17 @@ function requireTrimmedString(
   }
 }
 
+function isMoreThan24MonthsAgo(date: string) {
+  if (!date) return false;
+  const selectedDate = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(selectedDate.getTime())) return false;
+
+  const threshold = new Date();
+  threshold.setHours(0, 0, 0, 0);
+  threshold.setMonth(threshold.getMonth() - 24);
+  return selectedDate < threshold;
+}
+
 function buildWizardSchema(options: { isAuthenticated: boolean; step?: number; validateAll?: boolean }) {
   const shouldValidateStep = (step: number) => options.validateAll || options.step === step;
 
@@ -275,7 +301,6 @@ function buildWizardSchema(options: { isAuthenticated: boolean; step?: number; v
       requireTrimmedString(ctx, form.onBehalfOf.lastName, ['onBehalfOf', 'lastName'], 'Please give the last name of the person you are complaining for');
       requireTrimmedString(ctx, form.onBehalfOf.email, ['onBehalfOf', 'email'], 'Please provide the email address of the person you are complaining for');
       requireTrimmedString(ctx, form.onBehalfOf.relationshipToComplainant, ['onBehalfOf', 'relationshipToComplainant'], 'Please explain your relationship to the person you are complaining for');
-      requireTrimmedString(ctx, form.onBehalfOf.assistanceRequired, ['onBehalfOf', 'assistanceRequired'], 'Please tell us what assistance the person you are complaining for needs');
     }
 
     if (shouldValidateStep(1) && form.representative) {
@@ -290,7 +315,6 @@ function buildWizardSchema(options: { isAuthenticated: boolean; step?: number; v
       requireTrimmedString(ctx, form.representative.postcode, ['representative', 'postcode'], "Please provide your representative's postcode");
       requireTrimmedString(ctx, form.representative.email, ['representative', 'email'], "Please provide your representative's email address");
       requireTrimmedString(ctx, form.representative.mobile, ['representative', 'mobile'], "Please provide your representative's mobile number");
-      requireTrimmedString(ctx, form.representative.assistanceRequired, ['representative', 'assistanceRequired'], 'Please tell us what assistance is required to participate');
     }
 
     if (shouldValidateStep(2)) {
@@ -370,6 +394,18 @@ function buildWizardSchema(options: { isAuthenticated: boolean; step?: number; v
       });
     }
 
+    if (shouldValidateStep(3)) {
+      form.grounds.forEach((ground, index) => {
+        if (groundsRequiringDetail.has(ground.groundType) && !ground.conditionalDetail?.trim()) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['grounds', index, 'conditionalDetail'],
+            message: 'Please answer the follow-up question for the selected ground of complaint',
+          });
+        }
+      });
+    }
+
     if (shouldValidateStep(3) && form.description.trim().length < 20) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -397,6 +433,14 @@ function buildWizardSchema(options: { isAuthenticated: boolean; step?: number; v
         code: z.ZodIssueCode.custom,
         path: ['incidentLocation'],
         message: 'Please enter where exactly it happened',
+      });
+    }
+
+    if (shouldValidateStep(3) && isMoreThan24MonthsAgo(form.incidentDate) && !form.delayReason.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['delayReason'],
+        message: 'Please explain the reason for the delay in making this complaint',
       });
     }
 

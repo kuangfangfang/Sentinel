@@ -135,7 +135,6 @@ export function StepAboutYou({ isAuthenticated }: Props) {
   const onBehalfLastNameError = showValidation ? fieldErrorMessage(onBehalfErrors.lastName) : undefined;
   const onBehalfEmailError = showValidation ? fieldErrorMessage(onBehalfErrors.email) : undefined;
   const onBehalfRelationshipError = showValidation ? fieldErrorMessage(onBehalfErrors.relationshipToComplainant) : undefined;
-  const onBehalfAssistanceError = showValidation ? fieldErrorMessage(onBehalfErrors.assistanceRequired) : undefined;
   const representativeTitleError = showValidation ? fieldErrorMessage(representativeErrors.title) : undefined;
   const representativeFirstNameError = showValidation ? fieldErrorMessage(representativeErrors.firstName) : undefined;
   const representativeLastNameError = showValidation ? fieldErrorMessage(representativeErrors.lastName) : undefined;
@@ -143,7 +142,6 @@ export function StepAboutYou({ isAuthenticated }: Props) {
   const representativeOrganisationError = showValidation ? fieldErrorMessage(representativeErrors.organisation) : undefined;
   const representativeEmailError = showValidation ? fieldErrorMessage(representativeErrors.email) : undefined;
   const representativeMobileError = showValidation ? fieldErrorMessage(representativeErrors.mobile) : undefined;
-  const representativeAssistanceError = showValidation ? fieldErrorMessage(representativeErrors.assistanceRequired) : undefined;
 
   function renderRepresentativeMobile() {
     const repMobile = register('representative.mobile', { setValueAs: digitsOnly });
@@ -376,16 +374,12 @@ export function StepAboutYou({ isAuthenticated }: Props) {
               )}
             </div>
             <div className="sm:col-span-2">
-              <label htmlFor="ob-assist" className="label">Do they need assistance to take part?<RequiredMark /></label>
+              <label htmlFor="ob-assist" className="label">Do they need assistance to take part? (optional)</label>
               <textarea
                 id="ob-assist"
-                className={inputClass(Boolean(onBehalfAssistanceError), 'min-h-[80px]')}
-                aria-invalid={invalidAria(Boolean(onBehalfAssistanceError))}
+                className="input min-h-[80px]"
                 {...register('onBehalfOf.assistanceRequired')}
               />
-              {onBehalfAssistanceError && (
-                <p className="error-text">{onBehalfAssistanceError}</p>
-              )}
             </div>
           </div>
         )}
@@ -501,16 +495,12 @@ export function StepAboutYou({ isAuthenticated }: Props) {
               )}
             </div>
             <div className="sm:col-span-2">
-              <label htmlFor="rep-assist" className="label">Assistance required to participate<RequiredMark /></label>
+              <label htmlFor="rep-assist" className="label">Assistance required to participate (optional)</label>
               <textarea
                 id="rep-assist"
-                className={inputClass(Boolean(representativeAssistanceError), 'min-h-[80px]')}
-                aria-invalid={invalidAria(Boolean(representativeAssistanceError))}
+                className="input min-h-[80px]"
                 {...register('representative.assistanceRequired')}
               />
-              {representativeAssistanceError && (
-                <p className="error-text">{representativeAssistanceError}</p>
-              )}
             </div>
           </div>
         )}

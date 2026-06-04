@@ -35,6 +35,7 @@ export function StepWhatHappened({ groundsCatalog }: Props) {
   const descriptionError = showValidation ? fieldErrorMessage(errors.description) : undefined;
   const incidentDateError = showValidation ? fieldErrorMessage(errors.incidentDate) : undefined;
   const incidentLocationError = showValidation ? fieldErrorMessage(errors.incidentLocation) : undefined;
+  const delayReasonError = showValidation ? fieldErrorMessage(errors.delayReason) : undefined;
 
   const delayThreshold = new Date();
   delayThreshold.setHours(0, 0, 0, 0);
@@ -42,6 +43,12 @@ export function StepWhatHappened({ groundsCatalog }: Props) {
   const isLongDelay = form.incidentDate !== '' && new Date(`${form.incidentDate}T00:00:00`) < delayThreshold;
 
   const isSelected = (value: string) => form.grounds.some((g) => g.groundType === value);
+
+  function groundDetailError(index: number): string | undefined {
+    if (!showValidation) return undefined;
+    const groundErrors = errors.grounds as Array<{ conditionalDetail?: unknown }> | undefined;
+    return fieldErrorMessage(groundErrors?.[index]?.conditionalDetail);
+  }
 
   function toggle(value: string) {
     const next = isSelected(value)
@@ -116,23 +123,36 @@ export function StepWhatHappened({ groundsCatalog }: Props) {
             <div key={group}>
               <p className="text-sm font-semibold text-slate-500">{group}</p>
               <div className="mt-2 space-y-2">
-                {items.map((g) => (
-                  <div key={g.value}>
-                    <label className="flex items-start gap-3">
-                      <input type="checkbox" className="mt-1 h-4 w-4" checked={isSelected(g.value)} onChange={() => toggle(g.value)} />
-                      <span>{g.label}</span>
-                    </label>
-                    {isSelected(g.value) && g.requiresDetail && (
-                      <input
-                        className="input mt-2 ml-7 max-w-md"
-                        placeholder={g.detailPrompt ?? 'Please give details'}
-                        aria-label={g.detailPrompt ?? `Details for ${g.label}`}
-                        value={form.grounds.find((x) => x.groundType === g.value)?.conditionalDetail ?? ''}
-                        onChange={(e) => setDetail(g.value, e.target.value)}
-                      />
-                    )}
-                  </div>
-                ))}
+                {items.map((g) => {
+                  const selectedIndex = form.grounds.findIndex((x) => x.groundType === g.value);
+                  const detailError = selectedIndex >= 0 ? groundDetailError(selectedIndex) : undefined;
+                  const prompt = g.detailPrompt ?? `Details for ${g.label}`;
+
+                  return (
+                    <div key={g.value}>
+                      <label className="flex items-start gap-3">
+                        <input type="checkbox" className="mt-1 h-4 w-4" checked={isSelected(g.value)} onChange={() => toggle(g.value)} />
+                        <span>{g.label}</span>
+                      </label>
+                      {selectedIndex >= 0 && g.requiresDetail && (
+                        <div className="mt-2 ml-7 max-w-md" data-field-container>
+                          <label htmlFor={`ground-detail-${g.value}`} className="label">
+                            {prompt}<RequiredMark />
+                          </label>
+                          <input
+                            id={`ground-detail-${g.value}`}
+                            className={inputClass(Boolean(detailError))}
+                            aria-invalid={invalidAria(Boolean(detailError))}
+                            placeholder={prompt}
+                            value={form.grounds[selectedIndex]?.conditionalDetail ?? ''}
+                            onChange={(e) => setDetail(g.value, e.target.value)}
+                          />
+                          {detailError && <p className="error-text">{detailError}</p>}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ))}
@@ -215,13 +235,15 @@ export function StepWhatHappened({ groundsCatalog }: Props) {
 
       {isLongDelay && (
         <div>
-          <label htmlFor="delayReason" className="label">Reason for the delay in making this complaint</label>
+          <label htmlFor="delayReason" className="label">Reason for the delay in making this complaint<RequiredMark /></label>
           <textarea
             id="delayReason"
-            className="input min-h-[90px]"
+            className={inputClass(Boolean(delayReasonError), 'min-h-[90px]')}
+            aria-invalid={invalidAria(Boolean(delayReasonError))}
             placeholder="The event happened more than 24 months ago. Please tell us why the complaint is being made now."
             {...register('delayReason')}
           />
+          {delayReasonError && <p className="error-text">{delayReasonError}</p>}
           <p className="help">
             The Commission may decide not to investigate complaints lodged more than 24 months after the event
             (12 months for human-rights or ILO employment matters), but you can explain the delay here.
