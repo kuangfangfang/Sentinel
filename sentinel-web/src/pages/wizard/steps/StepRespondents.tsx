@@ -44,6 +44,10 @@ function digitsOnly(value: unknown): string {
   return typeof value === 'string' ? value.replace(/\D/g, '').slice(0, 10) : '';
 }
 
+function postcodeDigits(value: unknown): string {
+  return typeof value === 'string' ? value.replace(/\D/g, '').slice(0, 4) : '';
+}
+
 function RespondentFieldset({ respondent, index, onRemove }: RespondentFieldsetProps) {
   const {
     control,
@@ -141,6 +145,7 @@ function RespondentFieldset({ respondent, index, onRemove }: RespondentFieldsetP
   const abnRegistration = register(`respondents.${index}.abnAcn`, { setValueAs: normalizeAbnAcn });
   const phoneRegistration = register(`respondents.${index}.contactPhone`, { setValueAs: digitsOnly });
   const mobileRegistration = register(`respondents.${index}.mobile`, { setValueAs: digitsOnly });
+  const postcodeRegistration = register(`respondents.${index}.postcode`, { setValueAs: postcodeDigits });
 
   return (
     <fieldset className="rounded-lg border border-slate-200 p-4">
@@ -282,7 +287,14 @@ function RespondentFieldset({ respondent, index, onRemove }: RespondentFieldsetP
             id={`r-postcode-${respondent.uiKey}`}
             className={inputClass(Boolean(postcodeError))}
             aria-invalid={invalidAria(Boolean(postcodeError))}
-            {...register(`respondents.${index}.postcode`)}
+            inputMode="numeric"
+            maxLength={4}
+            pattern="[0-9]{4}"
+            {...postcodeRegistration}
+            onChange={(e) => {
+              e.target.value = postcodeDigits(e.target.value);
+              postcodeRegistration.onChange(e);
+            }}
           />
           {postcodeError && (
             <p className="error-text">{postcodeError}</p>

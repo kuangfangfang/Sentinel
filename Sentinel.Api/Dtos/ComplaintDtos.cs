@@ -18,6 +18,7 @@ public record RespondentDto
     public string? AddressLine { get; init; }
     public string? Suburb { get; init; }
     public string? State { get; init; }
+    [RegularExpression(@"^\d{4}$", ErrorMessage = "Postcode must be 4 digits.")]
     public string? Postcode { get; init; }
     [StringLength(200)] public string? RelationshipToComplainant { get; init; }
 }
@@ -30,7 +31,8 @@ public record ComplainantContactDto
     public string? AddressLine { get; init; }
     public string? Suburb { get; init; }
     public string? State { get; init; }
-    [StringLength(10)] public string? Postcode { get; init; }
+    [RegularExpression(@"^\d{4}$", ErrorMessage = "Postcode must be 4 digits.")]
+    public string? Postcode { get; init; }
     [EmailAddress] public string? Email { get; init; }
     public string? PhoneAh { get; init; }
     public string? PhoneBh { get; init; }
@@ -62,6 +64,7 @@ public record RepresentativeDto
     public string? AddressLine { get; init; }
     public string? Suburb { get; init; }
     public string? State { get; init; }
+    [RegularExpression(@"^\d{4}$", ErrorMessage = "Postcode must be 4 digits.")]
     public string? Postcode { get; init; }
     [EmailAddress] public string? Email { get; init; }
     public string? PhoneBh { get; init; }

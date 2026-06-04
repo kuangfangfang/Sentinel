@@ -200,6 +200,18 @@ for (const testCase of representativeRequiredCases) {
   assert(anonymousStepOneSchema.safeParse(data).success, 'representative assistance details are optional');
 }
 
+{
+  const data = clone(validWizard);
+  data.complainantContact.postcode = 'ABC';
+  assertInvalid(anonymousStepOneSchema.safeParse(data), 'complainantContact.postcode', 'complainant postcode must be 4 digits when provided');
+}
+
+{
+  const data = clone(validWizard);
+  data.representative = { ...completeRepresentative, postcode: '215' };
+  assertInvalid(anonymousStepOneSchema.safeParse(data), 'representative.postcode', 'representative postcode must be 4 digits');
+}
+
 const stepTwoRequiredCases: Array<{
   label: string;
   path: string;
@@ -268,6 +280,12 @@ for (const testCase of stepTwoRequiredCases) {
   const data = clone(validWizard);
   data.respondents[0].contactPhone = '041';
   assertInvalid(stepTwoSchema.safeParse(data), 'respondents.0.contactPhone', 'respondent phone validates format when provided');
+}
+
+{
+  const data = clone(validWizard);
+  data.respondents[0].postcode = '27A5';
+  assertInvalid(stepTwoSchema.safeParse(data), 'respondents.0.postcode', 'respondent postcode must be 4 digits');
 }
 
 {

@@ -3,6 +3,7 @@ import { validateAbnAcn } from '../pages/wizard/respondentIdentity';
 
 // Australian mobile number: starts with 04, exactly 10 digits.
 const australianMobileRegex = /^04\d{8}$/;
+const australianPostcodeRegex = /^\d{4}$/;
 
 const looseStringSchema = z.string().optional().nullable().transform((value) => value ?? '');
 const looseBooleanSchema = z.boolean().optional().transform((value) => value ?? false);
@@ -13,6 +14,9 @@ const optionalLimitedTextSchema = (label: string, max: number) =>
   looseStringSchema.refine((value) => value.trim().length <= max, {
     message: maxLengthMessage(label, max),
   });
+const optionalPostcodeSchema = looseStringSchema.refine((value) => !value || australianPostcodeRegex.test(value), {
+  message: 'Postcode must be 4 digits',
+});
 
 const groundsRequiringDetail = new Set([
   'Age',
@@ -122,7 +126,7 @@ export const complainantContactSchema = z.object({
   addressLine: optionalTextSchema,
   suburb: optionalTextSchema,
   state: optionalTextSchema,
-  postcode: optionalLimitedTextSchema('Postcode', 10),
+  postcode: optionalPostcodeSchema,
   email: optionalEmailSchema,
   phoneAh: optionalTextSchema,
   phoneBh: optionalAustralianMobileSchema,
@@ -150,7 +154,7 @@ export const representativeSchema = z
     addressLine: optionalTextSchema,
     suburb: optionalTextSchema,
     state: optionalTextSchema,
-    postcode: optionalTextSchema,
+    postcode: optionalPostcodeSchema,
     email: optionalEmailSchema,
     phoneBh: optionalTextSchema,
     mobile: optionalAustralianMobileSchema,
@@ -175,7 +179,7 @@ export const respondentSchema = z.object({
   addressLine: optionalTextSchema,
   suburb: optionalTextSchema,
   state: optionalTextSchema,
-  postcode: optionalTextSchema,
+  postcode: optionalPostcodeSchema,
   relationshipToComplainant: optionalLimitedTextSchema('Relationship to respondent', 200),
 });
 

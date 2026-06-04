@@ -40,6 +40,10 @@ function digitsOnly(value: unknown): string {
   return typeof value === 'string' ? value.replace(/\D/g, '').slice(0, 10) : '';
 }
 
+function postcodeDigits(value: unknown): string {
+  return typeof value === 'string' ? value.replace(/\D/g, '').slice(0, 4) : '';
+}
+
 function fieldErrorMessage(error: unknown): string | undefined {
   if (!error || typeof error !== 'object' || !('message' in error)) return undefined;
   const message = (error as { message?: unknown }).message;
@@ -538,6 +542,7 @@ function AddressFields({
   const stateError = showValidation ? fieldErrorMessage(fieldErrors?.state) : undefined;
   const suburbError = showValidation ? fieldErrorMessage(fieldErrors?.suburb) : undefined;
   const postcodeError = showValidation ? fieldErrorMessage(fieldErrors?.postcode) : undefined;
+  const postcodeRegistration = register(addressPath(namePrefix, 'postcode'), { setValueAs: postcodeDigits });
 
   function patchAddress(patch: AddressPatch) {
     (Object.entries(patch) as Array<[AddressField, string | null | undefined]>).forEach(([field, value]) => {
@@ -604,7 +609,14 @@ function AddressFields({
           id={`${idPrefix}-postcode`}
           className={inputClass(Boolean(postcodeError))}
           aria-invalid={invalidAria(Boolean(postcodeError))}
-          {...register(addressPath(namePrefix, 'postcode'))}
+          inputMode="numeric"
+          maxLength={4}
+          pattern="[0-9]{4}"
+          {...postcodeRegistration}
+          onChange={(e) => {
+            e.target.value = postcodeDigits(e.target.value);
+            postcodeRegistration.onChange(e);
+          }}
         />
         {postcodeError && (
           <p className="error-text">{postcodeError}</p>
