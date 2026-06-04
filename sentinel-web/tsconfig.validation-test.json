@@ -11,5 +11,5 @@
     "noUnusedParameters": false,
     "outDir": ".tmp-validation-tests"
   },
-  "files": ["test/schema-validation.test.ts"]
+  "files": ["test/schema-validation.test.ts", "test/translation-widget.test.ts"]
 }

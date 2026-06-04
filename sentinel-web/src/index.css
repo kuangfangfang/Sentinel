@@ -41,6 +41,32 @@
   .btn-locked {
     @apply btn bg-slate-300 text-slate-600 cursor-not-allowed hover:bg-slate-300;
   }
+  .sentinel-google-translate {
+    @apply relative z-50 inline-block w-full sm:w-auto;
+  }
+  .sentinel-translate-button {
+    @apply inline-flex h-10 w-full max-w-full items-center justify-center gap-2 rounded-lg border border-white/25
+           bg-white/10 px-3 text-sm font-semibold text-white shadow-sm transition-colors
+           hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:max-w-[15rem];
+  }
+  .sentinel-translate-menu {
+    @apply absolute right-0 top-full mt-2 w-[min(calc(100vw-2rem),32rem)] overflow-hidden rounded-lg border border-slate-200
+           bg-white text-slate-900 shadow-2xl;
+  }
+  .sentinel-translate-search {
+    @apply m-3 mb-2 w-[calc(100%-1.5rem)] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900
+           placeholder:text-slate-400 focus:border-accent-500;
+  }
+  .sentinel-translate-list {
+    @apply grid max-h-[22rem] grid-cols-1 gap-1 overflow-y-auto p-3 pt-1 sm:grid-cols-2;
+  }
+  .sentinel-translate-option {
+    @apply flex min-h-11 w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm font-medium
+           text-slate-700 transition-colors hover:bg-slate-100;
+  }
+  .sentinel-translate-option-active {
+    @apply bg-navy-900 text-white hover:bg-navy-900;
+  }
 
   .input {
     @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-slate-900

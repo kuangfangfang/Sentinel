@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useDoubleEscapeQuickExit } from '../hooks/useQuickExit';
+import { GoogleTranslate } from './GoogleTranslate';
 import { QuickExitButton } from './QuickExitButton';
 
 function navClass({ isActive }: { isActive: boolean }) {
@@ -48,7 +49,7 @@ export function Layout() {
         Skip to main content
       </a>
 
-      <header className="bg-navy-900 text-white">
+      <header className="sticky top-0 z-50 bg-navy-900 text-white">
         <div className="container-page flex h-16 items-center justify-between gap-4">
           <Link to="/" className="flex items-center gap-2 text-lg font-bold tracking-tight">
             <span className="flex h-8 w-8 items-center justify-center rounded-md bg-accent-600 text-white" aria-hidden="true">S</span>
@@ -60,6 +61,9 @@ export function Layout() {
           </nav>
 
           <div className="flex items-center gap-2">
+            <div className="hidden sm:block">
+              <GoogleTranslate />
+            </div>
             <QuickExitButton />
             <div className="hidden items-center gap-2 lg:flex">
               {user ? (
@@ -93,6 +97,9 @@ export function Layout() {
           <nav id="mobile-menu" className="container-page flex flex-col gap-1 pb-4 lg:hidden" aria-label="Mobile">
             {links}
             <div className="mt-2 flex flex-col gap-2 border-t border-navy-800 pt-3">
+              <div className="sm:hidden">
+                <GoogleTranslate />
+              </div>
               {user ? (
                 <button type="button" onClick={handleLogout} className="btn-secondary">Sign out ({user.fullName})</button>
               ) : (

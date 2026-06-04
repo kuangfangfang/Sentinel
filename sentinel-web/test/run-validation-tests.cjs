@@ -21,3 +21,4 @@ writeFileSync(join(outDir, 'package.json'), '{"type":"commonjs"}\n');
 
 run(process.execPath, [join(root, 'node_modules', 'typescript', 'bin', 'tsc'), '-p', 'tsconfig.validation-test.json']);
 run(process.execPath, [join(outDir, 'test', 'schema-validation.test.js')]);
+run(process.execPath, [join(outDir, 'test', 'translation-widget.test.js')]);
