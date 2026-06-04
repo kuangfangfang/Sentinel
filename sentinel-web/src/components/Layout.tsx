@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useDoubleEscapeQuickExit } from '../hooks/useQuickExit';
+import { DemoDisclaimerGate } from './DemoDisclaimerGate';
 import { GoogleTranslate } from './GoogleTranslate';
 import { QuickExitButton } from './QuickExitButton';
 
@@ -45,6 +46,7 @@ export function Layout() {
 
   return (
     <div className="flex min-h-screen flex-col">
+      <DemoDisclaimerGate />
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-white focus:px-4 focus:py-2 focus:text-navy-900 focus:shadow">
         Skip to main content
       </a>
