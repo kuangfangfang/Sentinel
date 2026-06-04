@@ -5,6 +5,7 @@ import type { WizardForm } from '../wizardTypes';
 import type { ComplainantContactDto, GroundDto, OnBehalfOfDto, RepresentativeDto, RespondentDto } from '../../../types';
 import { formatDateOnly } from '../../../utils/format';
 import { InfoTooltip } from '../../../components/InfoTooltip';
+import { classNames, invalidAria, RequiredMark, useFieldValidationDisplay } from '../fieldUi';
 
 interface Props extends StepProps {
   groundsCatalog: GroundDto[];
@@ -125,7 +126,14 @@ export function StepReview({ groundsCatalog }: Props) {
     formState: { errors },
   } = useFormContext<WizardForm>();
   const form = useWatch({ control }) as WizardForm;
+  const showValidation = useFieldValidationDisplay();
   const labelFor = (value: string) => groundsCatalog.find((g) => g.value === value)?.label ?? value;
+  const privacyNoticeAcceptedError =
+    showValidation && typeof errors.privacyNoticeAccepted?.message === 'string'
+      ? errors.privacyNoticeAccepted.message
+      : undefined;
+  const genAiUsedError =
+    showValidation && typeof errors.genAiUsed?.message === 'string' ? errors.genAiUsed.message : undefined;
 
   return (
     <div className="space-y-6">
@@ -179,20 +187,24 @@ export function StepReview({ groundsCatalog }: Props) {
           . The information you provide is collected to assess and handle your complaint. If a complaint proceeds,
           relevant information may be shared with the party complained about or others involved in handling the complaint.
         </p>
-        <label className="mt-3 flex items-start gap-3">
+        <label className={classNames('mt-3 flex items-start gap-3', privacyNoticeAcceptedError && 'choice-group-error')}>
           <input
             type="checkbox"
-            className="mt-1 h-4 w-4"
+            className={classNames('mt-1 h-4 w-4', privacyNoticeAcceptedError && 'input-error')}
+            aria-invalid={invalidAria(Boolean(privacyNoticeAcceptedError))}
             {...register('privacyNoticeAccepted')}
           />
-          <span className="text-sm">I have read and understood the privacy collection notice.</span>
+          <span className="text-sm">I have read and understood the privacy collection notice.<RequiredMark /></span>
         </label>
-        {errors.privacyNoticeAccepted && <p className="error-text">{errors.privacyNoticeAccepted.message}</p>}
+        {privacyNoticeAcceptedError && <p className="error-text">{privacyNoticeAcceptedError}</p>}
       </section>
 
-      <fieldset className="rounded-lg border border-slate-200 p-4">
+      <fieldset
+        className={classNames('rounded-lg border border-slate-200 p-4', genAiUsedError && 'fieldset-error')}
+        aria-invalid={invalidAria(Boolean(genAiUsedError))}
+      >
         <legend className="px-1 font-semibold text-navy-900">
-          Use of generative AI{' '}
+          <span>Use of generative AI<RequiredMark /></span>{' '}
           <InfoTooltip label="About using generative AI">
             <span className="block">
               Generative AI (GenAI) includes tools such as OpenAI&apos;s ChatGPT, Claude, Google Gemini and
@@ -213,7 +225,7 @@ export function StepReview({ groundsCatalog }: Props) {
           Did you use generative AI (for example ChatGPT, Claude, Gemini or Copilot) to help prepare this complaint?
           If you did, you are responsible for making sure the information is accurate.
         </p>
-        <div className="mt-3 flex gap-4">
+        <div className={classNames('mt-3 flex gap-4', genAiUsedError && 'choice-group-error')}>
           <label className="flex items-center gap-2">
             <input
               type="radio"
@@ -233,7 +245,7 @@ export function StepReview({ groundsCatalog }: Props) {
             <span>No</span>
           </label>
         </div>
-        {errors.genAiUsed && <p className="error-text">{errors.genAiUsed.message}</p>}
+        {genAiUsedError && <p className="error-text">{genAiUsedError}</p>}
       </fieldset>
     </div>
   );

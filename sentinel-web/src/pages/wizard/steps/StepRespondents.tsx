@@ -18,6 +18,7 @@ import {
   validateAbnAcn,
   type RespondentPartyType,
 } from '../respondentIdentity';
+import { inputClass, invalidAria, RequiredMark, useFieldValidationDisplay } from '../fieldUi';
 
 const RHF_UPDATE = { shouldDirty: true, shouldValidate: true };
 
@@ -50,10 +51,21 @@ function RespondentFieldset({ respondent, index, onRemove }: RespondentFieldsetP
     setValue,
     formState: { errors },
   } = useFormContext<WizardForm>();
+  const showValidation = useFieldValidationDisplay();
   const [lookup, setLookup] = useState<LookupState | null>(null);
   const abnAcn = respondent.abnAcn ?? '';
   const validation = respondent.partyType === 'organisation' ? validateAbnAcn(abnAcn) : { kind: 'empty' as const };
   const respondentErrors = errors.respondents?.[index] ?? {};
+  const nameError = showValidation ? fieldErrorMessage(respondentErrors.name) : undefined;
+  const abnAcnError = showValidation ? fieldErrorMessage(respondentErrors.abnAcn) : undefined;
+  const relationshipError = showValidation ? fieldErrorMessage(respondentErrors.relationshipToComplainant) : undefined;
+  const addressError = showValidation ? fieldErrorMessage(respondentErrors.addressLine) : undefined;
+  const stateError = showValidation ? fieldErrorMessage(respondentErrors.state) : undefined;
+  const suburbError = showValidation ? fieldErrorMessage(respondentErrors.suburb) : undefined;
+  const postcodeError = showValidation ? fieldErrorMessage(respondentErrors.postcode) : undefined;
+  const emailError = showValidation ? fieldErrorMessage(respondentErrors.contactEmail) : undefined;
+  const phoneError = showValidation ? fieldErrorMessage(respondentErrors.contactPhone) : undefined;
+  const mobileError = showValidation ? fieldErrorMessage(respondentErrors.mobile) : undefined;
 
   useEffect(() => {
     if (respondent.partyType !== 'organisation') {
@@ -182,27 +194,30 @@ function RespondentFieldset({ respondent, index, onRemove }: RespondentFieldsetP
         <div className="sm:col-span-2">
           <label htmlFor={`r-name-${respondent.uiKey}`} className="label">
             {respondent.partyType === 'person'
-              ? 'Name of person (required)'
+              ? 'Name of person'
               : respondent.partyType === 'organisation'
-              ? 'Name of organisation (required)'
-              : 'Name of person or organisation (required)'}
+              ? 'Name of organisation'
+              : 'Name of person or organisation'}
+            <RequiredMark />
           </label>
           <input
             id={`r-name-${respondent.uiKey}`}
-            className="input"
+            className={inputClass(Boolean(nameError))}
+            aria-invalid={invalidAria(Boolean(nameError))}
             {...register(`respondents.${index}.name`)}
           />
-          {fieldErrorMessage(respondentErrors.name) && (
-            <p className="error-text">{fieldErrorMessage(respondentErrors.name)}</p>
+          {nameError && (
+            <p className="error-text">{nameError}</p>
           )}
         </div>
 
         {respondent.partyType === 'organisation' && (
           <div className="sm:col-span-2">
-            <label htmlFor={`r-abn-${respondent.uiKey}`} className="label">ABN / ACN (required)</label>
+            <label htmlFor={`r-abn-${respondent.uiKey}`} className="label">ABN / ACN<RequiredMark /></label>
             <input
               id={`r-abn-${respondent.uiKey}`}
-              className="input"
+              className={inputClass(Boolean(abnAcnError))}
+              aria-invalid={invalidAria(Boolean(abnAcnError))}
               inputMode="numeric"
               pattern="[0-9]*"
               placeholder="e.g. 12345678901 (ABN) or 123456789 (ACN)"
@@ -213,8 +228,8 @@ function RespondentFieldset({ respondent, index, onRemove }: RespondentFieldsetP
               }}
             />
             <p className={`mt-1 text-sm ${helperTone}`}>{helperText}</p>
-            {fieldErrorMessage(respondentErrors.abnAcn) && (
-              <p className="error-text">{fieldErrorMessage(respondentErrors.abnAcn)}</p>
+            {abnAcnError && (
+              <p className="error-text">{abnAcnError}</p>
             )}
             {lookup?.entityName && validation.kind === 'valid' && validation.label === 'ABN' && (
               <p className="mt-1 text-sm font-medium text-navy-900">{lookup.entityName}</p>
@@ -223,70 +238,75 @@ function RespondentFieldset({ respondent, index, onRemove }: RespondentFieldsetP
         )}
 
         <div>
-          <label htmlFor={`r-rel-${respondent.uiKey}`} className="label">Your relationship to them (required)</label>
+          <label htmlFor={`r-rel-${respondent.uiKey}`} className="label">Your relationship to them<RequiredMark /></label>
           <input
             id={`r-rel-${respondent.uiKey}`}
-            className="input"
+            className={inputClass(Boolean(relationshipError))}
+            aria-invalid={invalidAria(Boolean(relationshipError))}
             placeholder="e.g. Employer, service provider"
             {...register(`respondents.${index}.relationshipToComplainant`)}
           />
-          {fieldErrorMessage(respondentErrors.relationshipToComplainant) && (
-            <p className="error-text">{fieldErrorMessage(respondentErrors.relationshipToComplainant)}</p>
+          {relationshipError && (
+            <p className="error-text">{relationshipError}</p>
           )}
         </div>
         <div className="sm:col-span-2">
-          <label htmlFor={`r-address-${respondent.uiKey}`} className="label">Address (required)</label>
+          <label htmlFor={`r-address-${respondent.uiKey}`} className="label">Address<RequiredMark /></label>
           <input
             id={`r-address-${respondent.uiKey}`}
-            className="input"
+            className={inputClass(Boolean(addressError))}
+            aria-invalid={invalidAria(Boolean(addressError))}
             {...register(`respondents.${index}.addressLine`)}
           />
-          {fieldErrorMessage(respondentErrors.addressLine) && (
-            <p className="error-text">{fieldErrorMessage(respondentErrors.addressLine)}</p>
+          {addressError && (
+            <p className="error-text">{addressError}</p>
           )}
         </div>
         <div>
-          <label htmlFor={`r-state-${respondent.uiKey}`} className="label">State/Territory (required)</label>
-          <StateCombobox index={index} respondent={respondent} />
-          {fieldErrorMessage(respondentErrors.state) && (
-            <p className="error-text">{fieldErrorMessage(respondentErrors.state)}</p>
+          <label htmlFor={`r-state-${respondent.uiKey}`} className="label">State/Territory<RequiredMark /></label>
+          <StateCombobox index={index} respondent={respondent} hasError={Boolean(stateError)} />
+          {stateError && (
+            <p className="error-text">{stateError}</p>
           )}
         </div>
         <div>
-          <label htmlFor={`r-suburb-${respondent.uiKey}`} className="label">Suburb (required)</label>
-          <SuburbCombobox index={index} respondent={respondent} />
-          {fieldErrorMessage(respondentErrors.suburb) && (
-            <p className="error-text">{fieldErrorMessage(respondentErrors.suburb)}</p>
+          <label htmlFor={`r-suburb-${respondent.uiKey}`} className="label">Suburb<RequiredMark /></label>
+          <SuburbCombobox index={index} respondent={respondent} hasError={Boolean(suburbError)} />
+          {suburbError && (
+            <p className="error-text">{suburbError}</p>
           )}
         </div>
         <div>
-          <label htmlFor={`r-postcode-${respondent.uiKey}`} className="label">Postcode (required)</label>
+          <label htmlFor={`r-postcode-${respondent.uiKey}`} className="label">Postcode<RequiredMark /></label>
           <input
             id={`r-postcode-${respondent.uiKey}`}
-            className="input"
+            className={inputClass(Boolean(postcodeError))}
+            aria-invalid={invalidAria(Boolean(postcodeError))}
             {...register(`respondents.${index}.postcode`)}
           />
-          {fieldErrorMessage(respondentErrors.postcode) && (
-            <p className="error-text">{fieldErrorMessage(respondentErrors.postcode)}</p>
+          {postcodeError && (
+            <p className="error-text">{postcodeError}</p>
           )}
         </div>
         <div>
-          <label htmlFor={`r-email-${respondent.uiKey}`} className="label">Email (required)</label>
+          <label htmlFor={`r-email-${respondent.uiKey}`} className="label">Email<RequiredMark /></label>
           <input
             id={`r-email-${respondent.uiKey}`}
             type="email"
-            className="input"
+            className={inputClass(Boolean(emailError))}
+            aria-invalid={invalidAria(Boolean(emailError))}
             {...register(`respondents.${index}.contactEmail`)}
           />
-          {fieldErrorMessage(respondentErrors.contactEmail) && (
-            <p className="error-text">{fieldErrorMessage(respondentErrors.contactEmail)}</p>
+          {emailError && (
+            <p className="error-text">{emailError}</p>
           )}
         </div>
         <div>
           <label htmlFor={`r-phone-${respondent.uiKey}`} className="label">Phone (BH)</label>
           <input
             id={`r-phone-${respondent.uiKey}`}
-            className="input"
+            className={inputClass(Boolean(phoneError))}
+            aria-invalid={invalidAria(Boolean(phoneError))}
             inputMode="numeric"
             pattern="[0-9]*"
             {...phoneRegistration}
@@ -295,15 +315,16 @@ function RespondentFieldset({ respondent, index, onRemove }: RespondentFieldsetP
               phoneRegistration.onChange(e);
             }}
           />
-          {fieldErrorMessage(respondentErrors.contactPhone) && (
-            <p className="error-text">{fieldErrorMessage(respondentErrors.contactPhone)}</p>
+          {phoneError && (
+            <p className="error-text">{phoneError}</p>
           )}
         </div>
         <div>
-          <label htmlFor={`r-mobile-${respondent.uiKey}`} className="label">Mobile (required)</label>
+          <label htmlFor={`r-mobile-${respondent.uiKey}`} className="label">Mobile<RequiredMark /></label>
           <input
             id={`r-mobile-${respondent.uiKey}`}
-            className="input"
+            className={inputClass(Boolean(mobileError))}
+            aria-invalid={invalidAria(Boolean(mobileError))}
             inputMode="numeric"
             pattern="[0-9]*"
             {...mobileRegistration}
@@ -312,8 +333,8 @@ function RespondentFieldset({ respondent, index, onRemove }: RespondentFieldsetP
               mobileRegistration.onChange(e);
             }}
           />
-          {fieldErrorMessage(respondentErrors.mobile) && (
-            <p className="error-text">{fieldErrorMessage(respondentErrors.mobile)}</p>
+          {mobileError && (
+            <p className="error-text">{mobileError}</p>
           )}
         </div>
       </div>
@@ -321,7 +342,15 @@ function RespondentFieldset({ respondent, index, onRemove }: RespondentFieldsetP
   );
 }
 
-function StateCombobox({ index, respondent }: { index: number; respondent: WizardRespondent }) {
+function StateCombobox({
+  index,
+  respondent,
+  hasError = false,
+}: {
+  index: number;
+  respondent: WizardRespondent;
+  hasError?: boolean;
+}) {
   const { control, setValue } = useFormContext<WizardForm>();
 
   return (
@@ -340,13 +369,22 @@ function StateCombobox({ index, respondent }: { index: number; respondent: Wizar
           }}
           placeholder="Select state"
           noOptionsMessage="No states"
+          hasError={hasError}
         />
       )}
     />
   );
 }
 
-function SuburbCombobox({ index, respondent }: { index: number; respondent: WizardRespondent }) {
+function SuburbCombobox({
+  index,
+  respondent,
+  hasError = false,
+}: {
+  index: number;
+  respondent: WizardRespondent;
+  hasError?: boolean;
+}) {
   const { setValue } = useFormContext<WizardForm>();
   const [locations, setLocations] = useState<AustralianSuburb[]>([]);
   const [loading, setLoading] = useState(false);
@@ -408,6 +446,7 @@ function SuburbCombobox({ index, respondent }: { index: number; respondent: Wiza
       placeholder={respondent.state ? 'Search suburb or postcode' : 'Select a state first'}
       disabled={!respondent.state || loading}
       noOptionsMessage={loading ? 'Loading...' : 'No suburbs'}
+      hasError={hasError}
     />
   );
 }

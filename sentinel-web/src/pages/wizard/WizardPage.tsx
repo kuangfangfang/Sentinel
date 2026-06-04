@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { FormProvider, useForm, useWatch, type FieldErrors, type Path, type Resolver } from 'react-hook-form';
+import { FormProvider, useForm, useWatch, type Path, type Resolver } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { complaintsApi } from '../../api/complaints';
@@ -15,6 +15,13 @@ import { StepWhatHappened } from './steps/StepWhatHappened';
 import { StepSupporting } from './steps/StepSupporting';
 import { StepReview } from './steps/StepReview';
 import { createWizardSchema } from '../../validation/schemas';
+import { FieldValidationDisplayProvider, RequiredNote } from './fieldUi';
+import {
+  createValidationSummary,
+  shouldShowStepValidation,
+  visibleValidationMessages,
+  type ValidationSummary,
+} from './wizardValidationSummary';
 
 const STEP_FIELDS: Record<number, Array<Path<WizardForm>>> = {
   1: ['complainantContact', 'interpreterRequired', 'preferredLanguage', 'onBehalfOf', 'representative'],
@@ -44,19 +51,30 @@ export function WizardPage() {
     defaultValues: emptyForm(),
     mode: 'onChange',
   });
-  const { control, formState, getValues, reset, trigger } = methods;
+  const { control, getValues, reset, trigger, watch } = methods;
   const form = useWatch({ control }) as WizardForm;
 
   const [serverDraftId, setServerDraftId] = useState<string | null>(draftIdParam ?? null);
   const [grounds, setGrounds] = useState<GroundDto[]>([]);
   const [loading, setLoading] = useState(Boolean(draftIdParam));
   const [serverErrors, setServerErrors] = useState<string[]>([]);
+  const [validationSummary, setValidationSummary] = useState<ValidationSummary | null>(null);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     complaintsApi.getGrounds().then(setGrounds).catch(() => setGrounds([]));
   }, []);
+
+  useEffect(() => {
+    const subscription = watch((_value, { name }) => {
+      if (!name) return;
+      setValidationSummary(null);
+      setServerErrors([]);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [watch]);
 
   useEffect(() => {
     if (!isAuthenticated || !user || draftIdParam) return;
@@ -105,6 +123,11 @@ export function WizardPage() {
     return trigger(STEP_FIELDS[target] ?? undefined, { shouldFocus: true });
   }
 
+  function stepValidationMessages(target: number): string[] {
+    const parsed = createWizardSchema({ isAuthenticated, step: target }).safeParse(getValues());
+    return parsed.success ? [] : parsed.error.issues.map((issue) => issue.message);
+  }
+
   async function ensureDraftId(): Promise<string | null> {
     if (!isAuthenticated) return null;
     if (serverDraftId) return serverDraftId;
@@ -127,18 +150,22 @@ export function WizardPage() {
   }
 
   async function goNext() {
+    setValidationSummary(null);
     const isValid = await triggerStepValidation(step);
     if (!isValid) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setValidationSummary(createValidationSummary(step, stepValidationMessages(step)));
+      window.requestAnimationFrame(scrollFirstWizardErrorIntoView);
       return;
     }
 
+    setValidationSummary(null);
     await persistDraft(Math.min(step + 1, 5));
     setStep((s) => Math.min(s + 1, 5));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function goBack() {
+    setValidationSummary(null);
     setServerErrors([]);
     setStep((s) => Math.max(s - 1, 1));
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -151,6 +178,14 @@ export function WizardPage() {
 
   async function submit() {
     setServerErrors([]);
+    setValidationSummary(null);
+    const isStepValid = await triggerStepValidation(5);
+    if (!isStepValid) {
+      setValidationSummary(createValidationSummary(5, stepValidationMessages(5)));
+      window.requestAnimationFrame(scrollFirstWizardErrorIntoView);
+      return;
+    }
+
     const parsed = createWizardSchema({ isAuthenticated, validateAll: true }).safeParse(getValues());
     if (!parsed.success) {
       setServerErrors([...new Set(parsed.error.issues.map((issue) => issue.message))]);
@@ -183,8 +218,8 @@ export function WizardPage() {
   }
 
   const heading = useMemo(() => WIZARD_STEPS.find((s) => s.number === step)?.title ?? '', [step]);
-  const clientErrors = useMemo(() => collectErrorMessages(formState.errors), [formState.errors]);
-  const errors = [...clientErrors, ...serverErrors];
+  const errors = visibleValidationMessages(validationSummary, step, serverErrors);
+  const showStepValidation = shouldShowStepValidation(validationSummary, step);
 
   if (loading) return <Spinner label="Loading your draft..." />;
 
@@ -211,14 +246,18 @@ export function WizardPage() {
         </div>
       )}
 
+      <RequiredNote />
+
       <FormProvider {...methods}>
-        <section className="card p-6" aria-label={`Step ${step}: ${heading}`}>
-          {step === 1 && <StepAboutYou isAuthenticated={isAuthenticated} />}
-          {step === 2 && <StepRespondents />}
-          {step === 3 && <StepWhatHappened groundsCatalog={grounds} />}
-          {step === 4 && <StepSupporting draftId={serverDraftId} isAuthenticated={isAuthenticated} />}
-          {step === 5 && <StepReview groundsCatalog={grounds} />}
-        </section>
+        <FieldValidationDisplayProvider show={showStepValidation}>
+          <section className="card p-6" aria-label={`Step ${step}: ${heading}`} data-wizard-step>
+            {step === 1 && <StepAboutYou isAuthenticated={isAuthenticated} />}
+            {step === 2 && <StepRespondents />}
+            {step === 3 && <StepWhatHappened groundsCatalog={grounds} />}
+            {step === 4 && <StepSupporting draftId={serverDraftId} isAuthenticated={isAuthenticated} />}
+            {step === 5 && <StepReview groundsCatalog={grounds} />}
+          </section>
+        </FieldValidationDisplayProvider>
       </FormProvider>
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -257,21 +296,23 @@ export function WizardPage() {
   );
 }
 
-function collectErrorMessages(errors: FieldErrors<WizardForm>): string[] {
-  const messages: string[] = [];
+function scrollFirstWizardErrorIntoView() {
+  const root = document.querySelector('[data-wizard-step]');
+  const firstError = root?.querySelector<HTMLElement>(
+    '[aria-invalid="true"], .input-error, .datepicker-error, .fieldset-error, .choice-group-error',
+  );
 
-  function visit(value: unknown) {
-    if (!value || typeof value !== 'object') return;
-
-    const maybeError = value as { message?: unknown };
-    if (typeof maybeError.message === 'string') messages.push(maybeError.message);
-
-    Object.entries(value as Record<string, unknown>).forEach(([key, child]) => {
-      if (key === 'message' || key === 'type' || key === 'ref') return;
-      visit(child);
-    });
+  if (!firstError) {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
   }
 
-  visit(errors);
-  return [...new Set(messages)];
+  const target = firstError.closest<HTMLElement>('[data-field-container]') ?? firstError;
+  target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  const focusTarget = firstError.matches('input, select, textarea, button, [tabindex]')
+    ? firstError
+    : firstError.querySelector<HTMLElement>('input, select, textarea, button, [tabindex]');
+
+  focusTarget?.focus({ preventScroll: true });
 }

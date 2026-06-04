@@ -15,6 +15,9 @@ interface ComboboxProps {
   placeholder?: string;
   disabled?: boolean;
   noOptionsMessage?: string;
+  hasError?: boolean;
+  ariaDescribedBy?: string;
+  className?: string;
 }
 
 interface DropdownPosition {
@@ -35,7 +38,19 @@ function useDebouncedValue(value: string, delayMs: number): string {
   return debounced;
 }
 
-export default function Combobox({ id, options, value, displayValue, onChange, placeholder, disabled, noOptionsMessage }: ComboboxProps) {
+export default function Combobox({
+  id,
+  options,
+  value,
+  displayValue,
+  onChange,
+  placeholder,
+  disabled,
+  noOptionsMessage,
+  hasError = false,
+  ariaDescribedBy,
+  className,
+}: ComboboxProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
@@ -155,12 +170,14 @@ export default function Combobox({ id, options, value, displayValue, onChange, p
       <input
         id={idRef.current}
         ref={inputRef}
-        className="input"
+        className={['input', className, hasError ? 'input-error' : ''].filter(Boolean).join(' ')}
         role="combobox"
         aria-expanded={open}
         aria-controls={listId}
         aria-activedescendant={open && filtered[highlight] ? `${listId}-option-${highlight}` : undefined}
         aria-autocomplete="list"
+        aria-invalid={hasError || undefined}
+        aria-describedby={ariaDescribedBy}
         disabled={disabled}
         placeholder={placeholder}
         value={query}

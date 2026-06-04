@@ -4,6 +4,11 @@ import {
   statusChangeSchema,
   trackSchema,
 } from '../src/validation/schemas';
+import {
+  createValidationSummary,
+  shouldShowStepValidation,
+  visibleValidationMessages,
+} from '../src/pages/wizard/wizardValidationSummary';
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -79,6 +84,9 @@ const anonymousStepOneSchema = createWizardSchema({ isAuthenticated: false, step
 const authenticatedStepOneSchema = createWizardSchema({ isAuthenticated: true, step: 1 });
 const allStepsSchema = createWizardSchema({ isAuthenticated: false, validateAll: true });
 const stepTwoSchema = createWizardSchema({ isAuthenticated: false, step: 2 });
+const stepThreeSchema = createWizardSchema({ isAuthenticated: false, step: 3 });
+const stepFourSchema = createWizardSchema({ isAuthenticated: false, step: 4 });
+const stepFiveSchema = createWizardSchema({ isAuthenticated: false, step: 5 });
 
 {
   const data = clone(validWizard);
@@ -252,6 +260,107 @@ for (const testCase of stepTwoRequiredCases) {
   assertInvalid(stepTwoSchema.safeParse(data), 'respondents.0.contactPhone', 'respondent phone validates format when provided');
 }
 
+const stepFourRequiredCases: Array<{
+  label: string;
+  path: string;
+  mutate: (data: any) => void;
+}> = [
+  { label: 'prior complaint agency is required when prior complaint was made', path: 'priorComplaintAgency', mutate: (data) => { data.priorComplaintAgency = ''; } },
+  { label: 'prior complaint date is required when prior complaint was made', path: 'priorComplaintDate', mutate: (data) => { data.priorComplaintDate = ''; } },
+  { label: 'prior complaint status is required when prior complaint was made', path: 'priorComplaintStatus', mutate: (data) => { data.priorComplaintStatus = ''; } },
+];
+
+for (const testCase of stepFourRequiredCases) {
+  const data = clone(validWizard);
+  data.priorComplaintMade = true;
+  data.priorComplaintAgency = 'Fair Work Commission';
+  data.priorComplaintDate = '2026-01-02';
+  data.priorComplaintStatus = 'In progress';
+  testCase.mutate(data);
+  assertInvalid(stepFourSchema.safeParse(data), testCase.path, testCase.label);
+}
+
+{
+  const data = clone(validWizard);
+  data.priorComplaintMade = true;
+  data.priorComplaintAgency = 'Fair Work Commission';
+  data.priorComplaintDate = '2026-01-02';
+  data.priorComplaintStatus = 'In progress';
+  assert(stepFourSchema.safeParse(data).success, 'complete prior complaint details pass step 4 validation');
+}
+
+{
+  const data = clone(validWizard);
+  data.priorComplaintMade = false;
+  data.priorComplaintAgency = '';
+  data.priorComplaintDate = '';
+  data.priorComplaintStatus = '';
+  assert(stepFourSchema.safeParse(data).success, 'prior complaint details are optional on step 4 when the answer is no');
+}
+
+const requiredMessageCases: Array<{
+  label: string;
+  schema: ReturnType<typeof createWizardSchema>;
+  mutate: (data: any) => void;
+}> = [
+  {
+    label: 'step 2 required messages start with Please',
+    schema: stepTwoSchema,
+    mutate: (data) => {
+      data.respondents[0].name = '';
+      data.respondents[0].relationshipToComplainant = '';
+      data.respondents[0].addressLine = '';
+      data.respondents[0].state = '';
+      data.respondents[0].suburb = '';
+      data.respondents[0].postcode = '';
+      data.respondents[0].contactEmail = '';
+      data.respondents[0].mobile = '';
+    },
+  },
+  {
+    label: 'step 3 required messages start with Please',
+    schema: stepThreeSchema,
+    mutate: (data) => {
+      data.title = '';
+      data.grounds = [];
+      data.description = '';
+      data.incidentDate = '';
+      data.incidentLocation = '';
+    },
+  },
+  {
+    label: 'step 4 required messages start with Please',
+    schema: stepFourSchema,
+    mutate: (data) => {
+      data.priorComplaintMade = true;
+      data.priorComplaintAgency = '';
+      data.priorComplaintDate = '';
+      data.priorComplaintStatus = '';
+    },
+  },
+  {
+    label: 'step 5 required messages start with Please',
+    schema: stepFiveSchema,
+    mutate: (data) => {
+      data.genAiUsed = null;
+      data.privacyNoticeAccepted = false;
+    },
+  },
+];
+
+for (const testCase of requiredMessageCases) {
+  const data = clone(validWizard);
+  testCase.mutate(data);
+  const result = testCase.schema.safeParse(data);
+  assert(!result.success, `${testCase.label}: expected validation to fail`);
+  const messages = result.error.issues.map((issue) => issue.message);
+  assert(messages.length > 0, `${testCase.label}: expected at least one message`);
+  assert(
+    messages.every((message) => message.startsWith('Please ')),
+    `${testCase.label}: got ${messages.join(' | ')}`,
+  );
+}
+
 const wizardLengthCases: Array<{
   label: string;
   path: string;
@@ -303,5 +412,30 @@ assertSchemaInvalid(statusChangeSchema.safeParse({
   statusTarget: 'Submitted',
   statusNote: 'A'.repeat(1001),
 }), 'statusNote', 'status note maximum length');
+
+{
+  const summary = createValidationSummary(4, [
+    'Please enter the name of the agency',
+    'Please enter the name of the agency',
+    'Please select the complaint status',
+  ]);
+
+  assert(summary?.messages.length === 2, 'validation summary deduplicates messages');
+  assert(
+    visibleValidationMessages(summary, 3, []).length === 0,
+    'validation summary is hidden on a different wizard step',
+  );
+  assert(
+    visibleValidationMessages(summary, 4, []).join('|') === 'Please enter the name of the agency|Please select the complaint status',
+    'validation summary is visible on its own wizard step',
+  );
+  assert(
+    visibleValidationMessages(null, 4, ['Could not lodge your complaint.']).join('|') === 'Could not lodge your complaint.',
+    'server errors remain renderable without a validation summary',
+  );
+  assert(!shouldShowStepValidation(null, 4), 'field validation is hidden before a failed continue attempt');
+  assert(!shouldShowStepValidation(summary, 3), 'field validation is hidden outside the attempted step');
+  assert(shouldShowStepValidation(summary, 4), 'field validation is visible for the attempted step');
+}
 
 console.log('validation schema checks passed');

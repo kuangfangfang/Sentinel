@@ -49,11 +49,33 @@
   .label {
     @apply block text-sm font-medium text-navy-800 mb-1;
   }
+  .required-mark {
+    @apply ml-0.5 align-super text-xs font-bold text-red-700;
+  }
+  .required-note {
+    @apply mb-2 text-right text-sm text-slate-700;
+  }
   .help {
     @apply mt-1 text-sm text-slate-500;
   }
   .error-text {
     @apply mt-1 text-sm text-red-700;
+  }
+  .input-error {
+    border: 2px solid #dc2626;
+  }
+  .input-error:focus {
+    border: 2px solid #dc2626;
+  }
+  .fieldset-error {
+    border: 2px solid #dc2626;
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+  }
+  .choice-group-error {
+    border: 2px solid #dc2626;
+    border-radius: 0.5rem;
+    padding: 0.75rem;
   }
 
   .card {
@@ -61,7 +83,7 @@
   }
   /* react-datepicker Tailwind overrides to match app styles */
   .datepicker-error {
-    @apply border-red-600 ring-1 ring-red-600;
+    border: 2px solid #dc2626;
   }
   .react-datepicker {
     @apply bg-white rounded-lg border border-slate-200 shadow-lg p-2 text-sm;

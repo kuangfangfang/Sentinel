@@ -6,6 +6,7 @@ import { InfoTooltip } from '../../../components/InfoTooltip';
 import ReactDatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { parse, isValid, isAfter, format } from 'date-fns';
+import { inputClass, invalidAria, RequiredMark, useFieldValidationDisplay } from '../fieldUi';
 
 interface Props extends StepProps {
   groundsCatalog: GroundDto[];
@@ -27,7 +28,13 @@ export function StepWhatHappened({ groundsCatalog }: Props) {
     formState: { errors },
   } = useFormContext<WizardForm>();
   const form = useWatch({ control }) as WizardForm;
+  const showValidation = useFieldValidationDisplay();
   const [dateError, setDateError] = useState(false);
+  const titleError = showValidation ? fieldErrorMessage(errors.title) : undefined;
+  const groundsError = showValidation ? fieldErrorMessage(errors.grounds) : undefined;
+  const descriptionError = showValidation ? fieldErrorMessage(errors.description) : undefined;
+  const incidentDateError = showValidation ? fieldErrorMessage(errors.incidentDate) : undefined;
+  const incidentLocationError = showValidation ? fieldErrorMessage(errors.incidentLocation) : undefined;
 
   const delayThreshold = new Date();
   delayThreshold.setHours(0, 0, 0, 0);
@@ -89,20 +96,21 @@ export function StepWhatHappened({ groundsCatalog }: Props) {
       </div>
 
       <div>
-        <label htmlFor="title" className="label">A short title for your complaint</label>
+        <label htmlFor="title" className="label">A short title for your complaint<RequiredMark /></label>
         <input
           id="title"
-          className="input"
+          className={inputClass(Boolean(titleError))}
+          aria-invalid={invalidAria(Boolean(titleError))}
           maxLength={150}
           placeholder="e.g. Refused workplace adjustments"
           {...register('title')}
         />
-        {errors.title && <p className="error-text">{errors.title.message}</p>}
+        {titleError && <p className="error-text">{titleError}</p>}
         <p className="help">A few words so you can recognise this complaint later.</p>
       </div>
 
-      <fieldset>
-        <legend className="label">Grounds of complaint (select all that apply)</legend>
+      <fieldset className={groundsError ? 'fieldset-error' : undefined} aria-invalid={invalidAria(Boolean(groundsError))}>
+        <legend className="label">Grounds of complaint (select all that apply)<RequiredMark /></legend>
         <div className="space-y-4">
           {Object.entries(groups).map(([group, items]) => (
             <div key={group}>
@@ -129,25 +137,28 @@ export function StepWhatHappened({ groundsCatalog }: Props) {
             </div>
           ))}
         </div>
-        {fieldErrorMessage(errors.grounds) && <p className="error-text">{fieldErrorMessage(errors.grounds)}</p>}
+        {groundsError && <p className="error-text">{groundsError}</p>}
       </fieldset>
 
       <div>
-        <label htmlFor="description" className="label">Describe what happened</label>
+        <label htmlFor="description" className="label">Describe what happened<RequiredMark /></label>
         <textarea
           id="description"
-          className="input min-h-[160px]"
+          className={inputClass(Boolean(descriptionError), 'min-h-[160px]')}
+          aria-invalid={invalidAria(Boolean(descriptionError))}
           placeholder="What happened, where, and who was involved. There is no length limit. Take the space you need."
           {...register('description')}
         />
-        {errors.description && <p className="error-text">{errors.description.message}</p>}
+        {descriptionError && <p className="error-text">{descriptionError}</p>}
         <p className="help">{form.description.trim().length} characters (minimum 20).</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <div className="mb-1 flex items-center gap-1.5">
-            <label htmlFor="incidentDate" className="text-sm font-medium text-navy-800">When did it happen?</label>
+            <label htmlFor="incidentDate" className="text-sm font-medium text-navy-800">
+              When did it happen?<RequiredMark />
+            </label>
             <InfoTooltip label="Time limits for lodging a complaint">
               <span className="block">
                 <span className="font-semibold text-slate-800">Note:</span> The President of the Commission can
@@ -176,7 +187,7 @@ export function StepWhatHappened({ groundsCatalog }: Props) {
             }}
             maxDate={new Date()}
             dateFormat="dd/MM/yyyy"
-            className={`input ${dateError || errors.incidentDate ? 'datepicker-error' : ''}`}
+            className={inputClass(Boolean(dateError || incidentDateError), dateError || incidentDateError ? 'datepicker-error' : undefined)}
             placeholderText="dd/MM/yyyy"
             shouldCloseOnSelect
             showPopperArrow={false}
@@ -186,17 +197,18 @@ export function StepWhatHappened({ groundsCatalog }: Props) {
             isClearable
           />
           {dateError && <p className="help text-red-600">Please enter a valid date (DD/MM/YYYY) on or before today.</p>}
-          {errors.incidentDate && <p className="error-text">{errors.incidentDate.message}</p>}
+          {incidentDateError && <p className="error-text">{incidentDateError}</p>}
         </div>
         <div>
-          <label htmlFor="incidentLocation" className="label">Where exactly did it happen?</label>
+          <label htmlFor="incidentLocation" className="label">Where exactly did it happen?<RequiredMark /></label>
           <input
             id="incidentLocation"
-            className="input"
+            className={inputClass(Boolean(incidentLocationError))}
+            aria-invalid={invalidAria(Boolean(incidentLocationError))}
             placeholder="e.g. Cafe name, street address or landmark, Suburb, State"
             {...register('incidentLocation')}
           />
-          {errors.incidentLocation && <p className="error-text">{errors.incidentLocation.message}</p>}
+          {incidentLocationError && <p className="error-text">{incidentLocationError}</p>}
           <p className="help">Give a specific location such as a venue name, street address or landmark.</p>
         </div>
       </div>

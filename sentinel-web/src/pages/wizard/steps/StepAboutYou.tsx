@@ -10,6 +10,7 @@ import {
   locationValue,
   type AustralianSuburb,
 } from '../../../data/australianLocations';
+import { inputClass, invalidAria, RequiredMark, useFieldValidationDisplay } from '../fieldUi';
 
 const knownPreferredLanguages = new Set(
   preferredLanguageOptions
@@ -61,6 +62,7 @@ export function StepAboutYou({ isAuthenticated }: Props) {
     formState: { errors },
   } = useFormContext<WizardForm>();
   const form = useWatch({ control }) as WizardForm;
+  const showValidation = useFieldValidationDisplay();
   const [specifyingOtherLanguage, setSpecifyingOtherLanguage] = useState(
     Boolean(form.preferredLanguage.trim()) && !knownPreferredLanguages.has(form.preferredLanguage),
   );
@@ -124,6 +126,24 @@ export function StepAboutYou({ isAuthenticated }: Props) {
   const contactErrors = errors.complainantContact ?? {};
   const onBehalfErrors = errors.onBehalfOf ?? {};
   const representativeErrors = errors.representative ?? {};
+  const contactFirstNameError = showValidation ? fieldErrorMessage(contactErrors.firstName) : undefined;
+  const contactLastNameError = showValidation ? fieldErrorMessage(contactErrors.lastName) : undefined;
+  const contactEmailError = showValidation ? fieldErrorMessage(contactErrors.email) : undefined;
+  const contactMobileError = showValidation ? fieldErrorMessage(contactErrors.phoneBh) : undefined;
+  const preferredLanguageError = showValidation ? fieldErrorMessage(errors.preferredLanguage) : undefined;
+  const onBehalfFirstNameError = showValidation ? fieldErrorMessage(onBehalfErrors.firstName) : undefined;
+  const onBehalfLastNameError = showValidation ? fieldErrorMessage(onBehalfErrors.lastName) : undefined;
+  const onBehalfEmailError = showValidation ? fieldErrorMessage(onBehalfErrors.email) : undefined;
+  const onBehalfRelationshipError = showValidation ? fieldErrorMessage(onBehalfErrors.relationshipToComplainant) : undefined;
+  const onBehalfAssistanceError = showValidation ? fieldErrorMessage(onBehalfErrors.assistanceRequired) : undefined;
+  const representativeTitleError = showValidation ? fieldErrorMessage(representativeErrors.title) : undefined;
+  const representativeFirstNameError = showValidation ? fieldErrorMessage(representativeErrors.firstName) : undefined;
+  const representativeLastNameError = showValidation ? fieldErrorMessage(representativeErrors.lastName) : undefined;
+  const representativePositionError = showValidation ? fieldErrorMessage(representativeErrors.position) : undefined;
+  const representativeOrganisationError = showValidation ? fieldErrorMessage(representativeErrors.organisation) : undefined;
+  const representativeEmailError = showValidation ? fieldErrorMessage(representativeErrors.email) : undefined;
+  const representativeMobileError = showValidation ? fieldErrorMessage(representativeErrors.mobile) : undefined;
+  const representativeAssistanceError = showValidation ? fieldErrorMessage(representativeErrors.assistanceRequired) : undefined;
 
   function renderRepresentativeMobile() {
     const repMobile = register('representative.mobile', { setValueAs: digitsOnly });
@@ -131,7 +151,8 @@ export function StepAboutYou({ isAuthenticated }: Props) {
     return (
       <input
         id="rep-mobile"
-        className="input"
+        className={inputClass(Boolean(representativeMobileError))}
+        aria-invalid={invalidAria(Boolean(representativeMobileError))}
         inputMode="numeric"
         pattern="[0-9]*"
         {...repMobile}
@@ -168,29 +189,45 @@ export function StepAboutYou({ isAuthenticated }: Props) {
           </div>
           <div>
             <label htmlFor="contact-first" className="label">
-              First name{isAuthenticated ? ' (required)' : ''}
+              First name{isAuthenticated && <RequiredMark />}
             </label>
-            <input id="contact-first" className="input" {...register('complainantContact.firstName')} />
-            {fieldErrorMessage(contactErrors.firstName) && (
-              <p className="error-text">{fieldErrorMessage(contactErrors.firstName)}</p>
+            <input
+              id="contact-first"
+              className={inputClass(Boolean(contactFirstNameError))}
+              aria-invalid={invalidAria(Boolean(contactFirstNameError))}
+              {...register('complainantContact.firstName')}
+            />
+            {contactFirstNameError && (
+              <p className="error-text">{contactFirstNameError}</p>
             )}
           </div>
           <div>
             <label htmlFor="contact-last" className="label">
-              Last name{isAuthenticated ? ' (required)' : ''}
+              Last name{isAuthenticated && <RequiredMark />}
             </label>
-            <input id="contact-last" className="input" {...register('complainantContact.lastName')} />
-            {fieldErrorMessage(contactErrors.lastName) && (
-              <p className="error-text">{fieldErrorMessage(contactErrors.lastName)}</p>
+            <input
+              id="contact-last"
+              className={inputClass(Boolean(contactLastNameError))}
+              aria-invalid={invalidAria(Boolean(contactLastNameError))}
+              {...register('complainantContact.lastName')}
+            />
+            {contactLastNameError && (
+              <p className="error-text">{contactLastNameError}</p>
             )}
           </div>
           <div>
             <label htmlFor="contact-email" className="label">
-              Email{isAuthenticated ? ' (required)' : ''}
+              Email{isAuthenticated && <RequiredMark />}
             </label>
-            <input id="contact-email" type="email" className="input" {...register('complainantContact.email')} />
-            {fieldErrorMessage(contactErrors.email) && (
-              <p className="error-text">{fieldErrorMessage(contactErrors.email)}</p>
+            <input
+              id="contact-email"
+              type="email"
+              className={inputClass(Boolean(contactEmailError))}
+              aria-invalid={invalidAria(Boolean(contactEmailError))}
+              {...register('complainantContact.email')}
+            />
+            {contactEmailError && (
+              <p className="error-text">{contactEmailError}</p>
             )}
           </div>
           <AddressFields
@@ -202,10 +239,11 @@ export function StepAboutYou({ isAuthenticated }: Props) {
             postcode={form.complainantContact.postcode}
           />
           <div>
-            <label htmlFor="contact-mobile" className="label">Mobile{isAuthenticated ? ' (required)' : ''}</label>
+            <label htmlFor="contact-mobile" className="label">Mobile{isAuthenticated && <RequiredMark />}</label>
             <input
               id="contact-mobile"
-              className="input"
+              className={inputClass(Boolean(contactMobileError))}
+              aria-invalid={invalidAria(Boolean(contactMobileError))}
               inputMode="numeric"
               pattern="[0-9]*"
               {...contactMobile}
@@ -215,8 +253,8 @@ export function StepAboutYou({ isAuthenticated }: Props) {
                 contactMobile.onChange(e);
               }}
             />
-            {fieldErrorMessage(contactErrors.phoneBh) && (
-              <p className="error-text">{fieldErrorMessage(contactErrors.phoneBh)}</p>
+            {contactMobileError && (
+              <p className="error-text">{contactMobileError}</p>
             )}
           </div>
           <div className="sm:col-span-2">
@@ -238,7 +276,7 @@ export function StepAboutYou({ isAuthenticated }: Props) {
         </label>
         {form.interpreterRequired && (
           <div>
-            <label htmlFor="lang" className="label">Preferred language</label>
+            <label htmlFor="lang" className="label">Preferred language<RequiredMark /></label>
             <div className="max-w-sm">
               <Controller
                 control={control}
@@ -251,17 +289,23 @@ export function StepAboutYou({ isAuthenticated }: Props) {
                     onChange={setPreferredLanguage}
                     placeholder="Search preferred language"
                     noOptionsMessage="No languages"
+                    hasError={Boolean(preferredLanguageError)}
                   />
                 )}
               />
             </div>
-            {fieldErrorMessage(errors.preferredLanguage) && (
-              <p className="error-text">{fieldErrorMessage(errors.preferredLanguage)}</p>
+            {preferredLanguageError && (
+              <p className="error-text">{preferredLanguageError}</p>
             )}
             {specifyingOtherLanguage && (
               <div className="mt-3 max-w-sm">
-                <label htmlFor="lang-other" className="label">Please specify language</label>
-                <input id="lang-other" className="input" {...register('preferredLanguage')} />
+                <label htmlFor="lang-other" className="label">Please specify language<RequiredMark /></label>
+                <input
+                  id="lang-other"
+                  className={inputClass(Boolean(preferredLanguageError))}
+                  aria-invalid={invalidAria(Boolean(preferredLanguageError))}
+                  {...register('preferredLanguage')}
+                />
               </div>
             )}
           </div>
@@ -283,38 +327,64 @@ export function StepAboutYou({ isAuthenticated }: Props) {
         {form.onBehalfOf && (
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label htmlFor="ob-first" className="label">Their first name (required)</label>
-              <input id="ob-first" className="input" {...register('onBehalfOf.firstName')} />
-              {fieldErrorMessage(onBehalfErrors.firstName) && (
-                <p className="error-text">{fieldErrorMessage(onBehalfErrors.firstName)}</p>
+              <label htmlFor="ob-first" className="label">Their first name<RequiredMark /></label>
+              <input
+                id="ob-first"
+                className={inputClass(Boolean(onBehalfFirstNameError))}
+                aria-invalid={invalidAria(Boolean(onBehalfFirstNameError))}
+                {...register('onBehalfOf.firstName')}
+              />
+              {onBehalfFirstNameError && (
+                <p className="error-text">{onBehalfFirstNameError}</p>
               )}
             </div>
             <div>
-              <label htmlFor="ob-last" className="label">Their last name (required)</label>
-              <input id="ob-last" className="input" {...register('onBehalfOf.lastName')} />
-              {fieldErrorMessage(onBehalfErrors.lastName) && (
-                <p className="error-text">{fieldErrorMessage(onBehalfErrors.lastName)}</p>
+              <label htmlFor="ob-last" className="label">Their last name<RequiredMark /></label>
+              <input
+                id="ob-last"
+                className={inputClass(Boolean(onBehalfLastNameError))}
+                aria-invalid={invalidAria(Boolean(onBehalfLastNameError))}
+                {...register('onBehalfOf.lastName')}
+              />
+              {onBehalfLastNameError && (
+                <p className="error-text">{onBehalfLastNameError}</p>
               )}
             </div>
             <div>
-              <label htmlFor="ob-email" className="label">Their email (required)</label>
-              <input id="ob-email" type="email" className="input" {...register('onBehalfOf.email')} />
-              {fieldErrorMessage(onBehalfErrors.email) && (
-                <p className="error-text">{fieldErrorMessage(onBehalfErrors.email)}</p>
+              <label htmlFor="ob-email" className="label">Their email<RequiredMark /></label>
+              <input
+                id="ob-email"
+                type="email"
+                className={inputClass(Boolean(onBehalfEmailError))}
+                aria-invalid={invalidAria(Boolean(onBehalfEmailError))}
+                {...register('onBehalfOf.email')}
+              />
+              {onBehalfEmailError && (
+                <p className="error-text">{onBehalfEmailError}</p>
               )}
             </div>
             <div>
-              <label htmlFor="ob-rel" className="label">Your relationship to them (required)</label>
-              <input id="ob-rel" className="input" {...register('onBehalfOf.relationshipToComplainant')} />
-              {fieldErrorMessage(onBehalfErrors.relationshipToComplainant) && (
-                <p className="error-text">{fieldErrorMessage(onBehalfErrors.relationshipToComplainant)}</p>
+              <label htmlFor="ob-rel" className="label">Your relationship to them<RequiredMark /></label>
+              <input
+                id="ob-rel"
+                className={inputClass(Boolean(onBehalfRelationshipError))}
+                aria-invalid={invalidAria(Boolean(onBehalfRelationshipError))}
+                {...register('onBehalfOf.relationshipToComplainant')}
+              />
+              {onBehalfRelationshipError && (
+                <p className="error-text">{onBehalfRelationshipError}</p>
               )}
             </div>
             <div className="sm:col-span-2">
-              <label htmlFor="ob-assist" className="label">Do they need assistance to take part? (required)</label>
-              <textarea id="ob-assist" className="input min-h-[80px]" {...register('onBehalfOf.assistanceRequired')} />
-              {fieldErrorMessage(onBehalfErrors.assistanceRequired) && (
-                <p className="error-text">{fieldErrorMessage(onBehalfErrors.assistanceRequired)}</p>
+              <label htmlFor="ob-assist" className="label">Do they need assistance to take part?<RequiredMark /></label>
+              <textarea
+                id="ob-assist"
+                className={inputClass(Boolean(onBehalfAssistanceError), 'min-h-[80px]')}
+                aria-invalid={invalidAria(Boolean(onBehalfAssistanceError))}
+                {...register('onBehalfOf.assistanceRequired')}
+              />
+              {onBehalfAssistanceError && (
+                <p className="error-text">{onBehalfAssistanceError}</p>
               )}
             </div>
           </div>
@@ -336,44 +406,69 @@ export function StepAboutYou({ isAuthenticated }: Props) {
         {form.representative && (
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label htmlFor="rep-title" className="label">Title (required)</label>
-              <select id="rep-title" className="input" {...register('representative.title')}>
+              <label htmlFor="rep-title" className="label">Title<RequiredMark /></label>
+              <select
+                id="rep-title"
+                className={inputClass(Boolean(representativeTitleError))}
+                aria-invalid={invalidAria(Boolean(representativeTitleError))}
+                {...register('representative.title')}
+              >
                 {titleOptions(form.representative.title).map((title) => (
                   <option key={title || 'blank'} value={title} disabled={!title}>
                     {title || 'Select title'}
                   </option>
                 ))}
               </select>
-              {fieldErrorMessage(representativeErrors.title) && (
-                <p className="error-text">{fieldErrorMessage(representativeErrors.title)}</p>
+              {representativeTitleError && (
+                <p className="error-text">{representativeTitleError}</p>
               )}
             </div>
             <div>
-              <label htmlFor="rep-first" className="label">First name (required)</label>
-              <input id="rep-first" className="input" {...register('representative.firstName')} />
-              {fieldErrorMessage(representativeErrors.firstName) && (
-                <p className="error-text">{fieldErrorMessage(representativeErrors.firstName)}</p>
+              <label htmlFor="rep-first" className="label">First name<RequiredMark /></label>
+              <input
+                id="rep-first"
+                className={inputClass(Boolean(representativeFirstNameError))}
+                aria-invalid={invalidAria(Boolean(representativeFirstNameError))}
+                {...register('representative.firstName')}
+              />
+              {representativeFirstNameError && (
+                <p className="error-text">{representativeFirstNameError}</p>
               )}
             </div>
             <div>
-              <label htmlFor="rep-last" className="label">Last name (required)</label>
-              <input id="rep-last" className="input" {...register('representative.lastName')} />
-              {fieldErrorMessage(representativeErrors.lastName) && (
-                <p className="error-text">{fieldErrorMessage(representativeErrors.lastName)}</p>
+              <label htmlFor="rep-last" className="label">Last name<RequiredMark /></label>
+              <input
+                id="rep-last"
+                className={inputClass(Boolean(representativeLastNameError))}
+                aria-invalid={invalidAria(Boolean(representativeLastNameError))}
+                {...register('representative.lastName')}
+              />
+              {representativeLastNameError && (
+                <p className="error-text">{representativeLastNameError}</p>
               )}
             </div>
             <div>
-              <label htmlFor="rep-position" className="label">Position (required)</label>
-              <input id="rep-position" className="input" {...register('representative.position')} />
-              {fieldErrorMessage(representativeErrors.position) && (
-                <p className="error-text">{fieldErrorMessage(representativeErrors.position)}</p>
+              <label htmlFor="rep-position" className="label">Position<RequiredMark /></label>
+              <input
+                id="rep-position"
+                className={inputClass(Boolean(representativePositionError))}
+                aria-invalid={invalidAria(Boolean(representativePositionError))}
+                {...register('representative.position')}
+              />
+              {representativePositionError && (
+                <p className="error-text">{representativePositionError}</p>
               )}
             </div>
             <div>
-              <label htmlFor="rep-org" className="label">Organisation (required)</label>
-              <input id="rep-org" className="input" {...register('representative.organisation')} />
-              {fieldErrorMessage(representativeErrors.organisation) && (
-                <p className="error-text">{fieldErrorMessage(representativeErrors.organisation)}</p>
+              <label htmlFor="rep-org" className="label">Organisation<RequiredMark /></label>
+              <input
+                id="rep-org"
+                className={inputClass(Boolean(representativeOrganisationError))}
+                aria-invalid={invalidAria(Boolean(representativeOrganisationError))}
+                {...register('representative.organisation')}
+              />
+              {representativeOrganisationError && (
+                <p className="error-text">{representativeOrganisationError}</p>
               )}
             </div>
             <AddressFields
@@ -386,24 +481,35 @@ export function StepAboutYou({ isAuthenticated }: Props) {
               required
             />
             <div>
-              <label htmlFor="rep-email" className="label">Email (required)</label>
-              <input id="rep-email" type="email" className="input" {...register('representative.email')} />
-              {fieldErrorMessage(representativeErrors.email) && (
-                <p className="error-text">{fieldErrorMessage(representativeErrors.email)}</p>
+              <label htmlFor="rep-email" className="label">Email<RequiredMark /></label>
+              <input
+                id="rep-email"
+                type="email"
+                className={inputClass(Boolean(representativeEmailError))}
+                aria-invalid={invalidAria(Boolean(representativeEmailError))}
+                {...register('representative.email')}
+              />
+              {representativeEmailError && (
+                <p className="error-text">{representativeEmailError}</p>
               )}
             </div>
             <div>
-              <label htmlFor="rep-mobile" className="label">Mobile (required)</label>
+              <label htmlFor="rep-mobile" className="label">Mobile<RequiredMark /></label>
               {renderRepresentativeMobile()}
-              {fieldErrorMessage(representativeErrors.mobile) && (
-                <p className="error-text">{fieldErrorMessage(representativeErrors.mobile)}</p>
+              {representativeMobileError && (
+                <p className="error-text">{representativeMobileError}</p>
               )}
             </div>
             <div className="sm:col-span-2">
-              <label htmlFor="rep-assist" className="label">Assistance required to participate (required)</label>
-              <textarea id="rep-assist" className="input min-h-[80px]" {...register('representative.assistanceRequired')} />
-              {fieldErrorMessage(representativeErrors.assistanceRequired) && (
-                <p className="error-text">{fieldErrorMessage(representativeErrors.assistanceRequired)}</p>
+              <label htmlFor="rep-assist" className="label">Assistance required to participate<RequiredMark /></label>
+              <textarea
+                id="rep-assist"
+                className={inputClass(Boolean(representativeAssistanceError), 'min-h-[80px]')}
+                aria-invalid={invalidAria(Boolean(representativeAssistanceError))}
+                {...register('representative.assistanceRequired')}
+              />
+              {representativeAssistanceError && (
+                <p className="error-text">{representativeAssistanceError}</p>
               )}
             </div>
           </div>
@@ -436,8 +542,12 @@ function AddressFields({
     setValue,
     formState: { errors },
   } = useFormContext<WizardForm>();
+  const showValidation = useFieldValidationDisplay();
   const fieldErrors = namePrefix === 'complainantContact' ? errors.complainantContact : errors.representative;
-  const requiredSuffix = required ? ' (required)' : '';
+  const addressError = showValidation ? fieldErrorMessage(fieldErrors?.addressLine) : undefined;
+  const stateError = showValidation ? fieldErrorMessage(fieldErrors?.state) : undefined;
+  const suburbError = showValidation ? fieldErrorMessage(fieldErrors?.suburb) : undefined;
+  const postcodeError = showValidation ? fieldErrorMessage(fieldErrors?.postcode) : undefined;
 
   function patchAddress(patch: AddressPatch) {
     (Object.entries(patch) as Array<[AddressField, string | null | undefined]>).forEach(([field, value]) => {
@@ -448,18 +558,19 @@ function AddressFields({
   return (
     <>
       <div className="sm:col-span-2">
-        <label htmlFor={`${idPrefix}-address`} className="label">Address{requiredSuffix}</label>
+        <label htmlFor={`${idPrefix}-address`} className="label">Address{required && <RequiredMark />}</label>
         <input
           id={`${idPrefix}-address`}
-          className="input"
+          className={inputClass(Boolean(addressError))}
+          aria-invalid={invalidAria(Boolean(addressError))}
           {...register(addressPath(namePrefix, 'addressLine'))}
         />
-        {fieldErrorMessage(fieldErrors?.addressLine) && (
-          <p className="error-text">{fieldErrorMessage(fieldErrors?.addressLine)}</p>
+        {addressError && (
+          <p className="error-text">{addressError}</p>
         )}
       </div>
       <div>
-        <label htmlFor={`${idPrefix}-state`} className="label">State/Territory{requiredSuffix}</label>
+        <label htmlFor={`${idPrefix}-state`} className="label">State/Territory{required && <RequiredMark />}</label>
         <Controller
           control={control}
           name={addressPath(namePrefix, 'state')}
@@ -475,35 +586,38 @@ function AddressFields({
               }}
               placeholder="Select state"
               noOptionsMessage="No states"
+              hasError={Boolean(stateError)}
             />
           )}
         />
-        {fieldErrorMessage(fieldErrors?.state) && (
-          <p className="error-text">{fieldErrorMessage(fieldErrors?.state)}</p>
+        {stateError && (
+          <p className="error-text">{stateError}</p>
         )}
       </div>
       <div>
-        <label htmlFor={`${idPrefix}-suburb`} className="label">Suburb{requiredSuffix}</label>
+        <label htmlFor={`${idPrefix}-suburb`} className="label">Suburb{required && <RequiredMark />}</label>
         <SuburbCombobox
           id={`${idPrefix}-suburb`}
           state={state ?? ''}
           suburb={suburb ?? ''}
           postcode={postcode ?? ''}
           onPatch={patchAddress}
+          hasError={Boolean(suburbError)}
         />
-        {fieldErrorMessage(fieldErrors?.suburb) && (
-          <p className="error-text">{fieldErrorMessage(fieldErrors?.suburb)}</p>
+        {suburbError && (
+          <p className="error-text">{suburbError}</p>
         )}
       </div>
       <div>
-        <label htmlFor={`${idPrefix}-postcode`} className="label">Postcode{requiredSuffix}</label>
+        <label htmlFor={`${idPrefix}-postcode`} className="label">Postcode{required && <RequiredMark />}</label>
         <input
           id={`${idPrefix}-postcode`}
-          className="input"
+          className={inputClass(Boolean(postcodeError))}
+          aria-invalid={invalidAria(Boolean(postcodeError))}
           {...register(addressPath(namePrefix, 'postcode'))}
         />
-        {fieldErrorMessage(fieldErrors?.postcode) && (
-          <p className="error-text">{fieldErrorMessage(fieldErrors?.postcode)}</p>
+        {postcodeError && (
+          <p className="error-text">{postcodeError}</p>
         )}
       </div>
     </>
@@ -516,12 +630,14 @@ function SuburbCombobox({
   suburb,
   postcode,
   onPatch,
+  hasError = false,
 }: {
   id: string;
   state: string;
   suburb: string;
   postcode: string;
   onPatch: (patch: AddressPatch) => void;
+  hasError?: boolean;
 }) {
   const [locations, setLocations] = useState<AustralianSuburb[]>([]);
   const [loading, setLoading] = useState(false);
@@ -574,6 +690,7 @@ function SuburbCombobox({
       placeholder={state ? 'Search suburb or postcode' : 'Select a state first'}
       disabled={!state || loading}
       noOptionsMessage={loading ? 'Loading...' : 'No suburbs'}
+      hasError={hasError}
     />
   );
 }

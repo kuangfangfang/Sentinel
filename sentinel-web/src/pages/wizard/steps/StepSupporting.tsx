@@ -8,6 +8,7 @@ import { ApiError } from '../../../api/client';
 import ReactDatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { isAfter, isValid, parse } from 'date-fns';
+import { inputClass, invalidAria, RequiredMark, useFieldValidationDisplay } from '../fieldUi';
 
 interface Props extends StepProps {
   draftId: string | null;
@@ -16,14 +17,29 @@ interface Props extends StepProps {
 
 const RHF_UPDATE = { shouldDirty: true, shouldValidate: true };
 
+function fieldErrorMessage(error: unknown): string | undefined {
+  if (!error || typeof error !== 'object' || !('message' in error)) return undefined;
+  const message = (error as { message?: unknown }).message;
+  return typeof message === 'string' ? message : undefined;
+}
+
 export function StepSupporting({ draftId, isAuthenticated }: Props) {
-  const { register, setValue, control } = useFormContext<WizardForm>();
+  const {
+    register,
+    setValue,
+    control,
+    formState: { errors },
+  } = useFormContext<WizardForm>();
   const form = useWatch({ control }) as WizardForm;
+  const showValidation = useFieldValidationDisplay();
   const [attachments, setAttachments] = useState<AttachmentDto[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [priorComplaintDateError, setPriorComplaintDateError] = useState(false);
   const [priorComplaintFinalisedDateError, setPriorComplaintFinalisedDateError] = useState(false);
+  const priorComplaintAgencyError = showValidation ? fieldErrorMessage(errors.priorComplaintAgency) : undefined;
+  const priorComplaintDateSchemaError = showValidation ? fieldErrorMessage(errors.priorComplaintDate) : undefined;
+  const priorComplaintStatusError = showValidation ? fieldErrorMessage(errors.priorComplaintStatus) : undefined;
 
   useEffect(() => {
     if (!draftId) return;
@@ -169,16 +185,18 @@ export function StepSupporting({ draftId, isAuthenticated }: Props) {
         {form.priorComplaintMade === true && (
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <label htmlFor="priorComplaintAgency" className="label">Name of agency</label>
+              <label htmlFor="priorComplaintAgency" className="label">Name of agency<RequiredMark /></label>
               <input
                 id="priorComplaintAgency"
-                className="input"
+                className={inputClass(Boolean(priorComplaintAgencyError))}
+                aria-invalid={invalidAria(Boolean(priorComplaintAgencyError))}
                 placeholder="e.g. Fair Work Commission"
                 {...register('priorComplaintAgency')}
               />
+              {priorComplaintAgencyError && <p className="error-text">{priorComplaintAgencyError}</p>}
             </div>
             <div>
-              <label htmlFor="priorComplaintDate" className="label">Date complaint was made</label>
+              <label htmlFor="priorComplaintDate" className="label">Date complaint was made<RequiredMark /></label>
               <ReactDatePicker
                 id="priorComplaintDate"
                 selected={form.priorComplaintDate ? new Date(`${form.priorComplaintDate}T00:00:00`) : null}
@@ -187,7 +205,10 @@ export function StepSupporting({ draftId, isAuthenticated }: Props) {
                 onBlur={handlePriorComplaintDateBlur}
                 maxDate={new Date()}
                 dateFormat="dd/MM/yyyy"
-                className={`input ${priorComplaintDateError ? 'datepicker-error' : ''}`}
+                className={inputClass(
+                  Boolean(priorComplaintDateError || priorComplaintDateSchemaError),
+                  priorComplaintDateError || priorComplaintDateSchemaError ? 'datepicker-error' : undefined,
+                )}
                 placeholderText="dd/MM/yyyy"
                 shouldCloseOnSelect
                 showPopperArrow={false}
@@ -197,15 +218,22 @@ export function StepSupporting({ draftId, isAuthenticated }: Props) {
                 isClearable
               />
               {priorComplaintDateError && <p className="help text-red-600">Please enter a valid date (DD/MM/YYYY) on or before today.</p>}
+              {priorComplaintDateSchemaError && <p className="error-text">{priorComplaintDateSchemaError}</p>}
             </div>
             <div>
-              <label htmlFor="priorComplaintStatus" className="label">Status of complaint</label>
-              <select id="priorComplaintStatus" className="input" {...register('priorComplaintStatus')}>
+              <label htmlFor="priorComplaintStatus" className="label">Status of complaint<RequiredMark /></label>
+              <select
+                id="priorComplaintStatus"
+                className={inputClass(Boolean(priorComplaintStatusError))}
+                aria-invalid={invalidAria(Boolean(priorComplaintStatusError))}
+                {...register('priorComplaintStatus')}
+              >
                 <option value="">Select status</option>
                 <option value="In progress">In progress</option>
                 <option value="Finalised">Finalised</option>
                 <option value="Withdrawn">Withdrawn</option>
               </select>
+              {priorComplaintStatusError && <p className="error-text">{priorComplaintStatusError}</p>}
             </div>
             <div>
               <label htmlFor="priorComplaintFinalisedDate" className="label">Date complaint was finalised (optional)</label>

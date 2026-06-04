@@ -298,20 +298,20 @@ function buildWizardSchema(options: { isAuthenticated: boolean; step?: number; v
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['respondents'],
-          message: 'Add at least one person or organisation the complaint is about',
+          message: 'Please add at least one person or organisation the complaint is about',
         });
       }
 
       form.respondents.forEach((respondent, index) => {
         const requiredFields: Array<[keyof typeof respondent, string]> = [
-          ['name', 'Enter the respondent name'],
-          ['relationshipToComplainant', 'Enter your relationship to the respondent'],
-          ['addressLine', 'Enter the respondent address'],
-          ['state', 'Select the respondent state or territory'],
-          ['suburb', 'Select the respondent suburb'],
-          ['postcode', 'Enter the respondent postcode'],
-          ['contactEmail', 'Enter the respondent email address'],
-          ['mobile', 'Enter the respondent mobile number'],
+          ['name', 'Please enter the respondent name'],
+          ['relationshipToComplainant', 'Please enter your relationship to the respondent'],
+          ['addressLine', 'Please enter the respondent address'],
+          ['state', 'Please select the respondent state or territory'],
+          ['suburb', 'Please select the respondent suburb'],
+          ['postcode', 'Please enter the respondent postcode'],
+          ['contactEmail', 'Please enter the respondent email address'],
+          ['mobile', 'Please enter the respondent mobile number'],
         ];
 
         requiredFields.forEach(([field, message]) => {
@@ -329,7 +329,7 @@ function buildWizardSchema(options: { isAuthenticated: boolean; step?: number; v
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ['respondents', index, 'abnAcn'],
-            message: 'Enter the organisation ABN or ACN',
+            message: 'Please enter the organisation ABN or ACN',
           });
         }
 
@@ -358,7 +358,7 @@ function buildWizardSchema(options: { isAuthenticated: boolean; step?: number; v
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['title'],
-        message: 'Give your complaint a short title (at least 5 characters)',
+        message: 'Please give your complaint a short title (at least 5 characters)',
       });
     }
 
@@ -366,7 +366,7 @@ function buildWizardSchema(options: { isAuthenticated: boolean; step?: number; v
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['grounds'],
-        message: 'Select at least one ground of complaint',
+        message: 'Please select at least one ground of complaint',
       });
     }
 
@@ -374,7 +374,7 @@ function buildWizardSchema(options: { isAuthenticated: boolean; step?: number; v
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['description'],
-        message: 'Describe what happened in at least 20 characters',
+        message: 'Please describe what happened in at least 20 characters',
       });
     }
 
@@ -382,7 +382,7 @@ function buildWizardSchema(options: { isAuthenticated: boolean; step?: number; v
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['incidentDate'],
-        message: 'Enter the date the event happened',
+        message: 'Please enter the date the event happened',
       });
     } else if (shouldValidateStep(3) && form.incidentDate > new Date().toISOString().slice(0, 10)) {
       ctx.addIssue({
@@ -396,8 +396,14 @@ function buildWizardSchema(options: { isAuthenticated: boolean; step?: number; v
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['incidentLocation'],
-        message: 'Enter where exactly it happened',
+        message: 'Please enter where exactly it happened',
       });
+    }
+
+    if (shouldValidateStep(4) && form.priorComplaintMade === true) {
+      requireTrimmedString(ctx, form.priorComplaintAgency, ['priorComplaintAgency'], 'Please enter the name of the agency');
+      requireTrimmedString(ctx, form.priorComplaintDate, ['priorComplaintDate'], 'Please enter the date the complaint was made');
+      requireTrimmedString(ctx, form.priorComplaintStatus, ['priorComplaintStatus'], 'Please select the complaint status');
     }
 
     if (shouldValidateStep(5) && form.genAiUsed === null) {
@@ -412,7 +418,7 @@ function buildWizardSchema(options: { isAuthenticated: boolean; step?: number; v
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['privacyNoticeAccepted'],
-        message: 'You must confirm you have read the privacy notice before lodging',
+        message: 'Please confirm you have read the privacy notice before lodging',
       });
     }
   });
