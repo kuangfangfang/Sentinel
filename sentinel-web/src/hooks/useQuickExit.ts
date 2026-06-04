@@ -1,8 +1,12 @@
 import { useEffect, useRef } from 'react';
 
 // The neutral destination a user is sent to on quick exit (SRS 13.3 leaves the
-// exact site to the implementer). A weather site is innocuous and loads fast.
-const NEUTRAL_URL = 'https://www.bom.gov.au';
+// exact site to the implementer). A Google weather search is innocuous and familiar.
+export const QUICK_EXIT_URL = 'https://www.google.com/search?q=weather';
+
+export function isQuickExitKey(e: Pick<KeyboardEvent, 'key' | 'code'>): boolean {
+  return e.key === 'Escape' || e.key === 'Esc' || e.code === 'Escape';
+}
 
 /**
  * Leaves Sentinel immediately and replaces the current history entry so the
@@ -10,9 +14,9 @@ const NEUTRAL_URL = 'https://www.bom.gov.au';
  */
 export function quickExit(): void {
   try {
-    window.location.replace(NEUTRAL_URL);
+    window.location.replace(QUICK_EXIT_URL);
   } catch {
-    window.location.href = NEUTRAL_URL;
+    window.location.href = QUICK_EXIT_URL;
   }
 }
 
@@ -26,16 +30,18 @@ export function useDoubleEscapeQuickExit(): void {
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key !== 'Escape') return;
+      if (!isQuickExitKey(e)) return;
       const now = Date.now();
       if (now - lastEscape.current < 500) {
         lastEscape.current = 0;
+        e.preventDefault();
+        e.stopPropagation();
         quickExit();
       } else {
         lastEscape.current = now;
       }
     }
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    document.addEventListener('keydown', onKeyDown, { capture: true });
+    return () => document.removeEventListener('keydown', onKeyDown, { capture: true });
   }, []);
 }
