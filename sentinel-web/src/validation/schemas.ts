@@ -282,6 +282,11 @@ function buildWizardSchema(options: { isAuthenticated: boolean; step?: number; v
           message: 'Please provide your email address',
         });
       }
+
+      requireTrimmedString(ctx, form.complainantContact.addressLine, ['complainantContact', 'addressLine'], 'Please provide your address');
+      requireTrimmedString(ctx, form.complainantContact.state, ['complainantContact', 'state'], 'Please select your state or territory');
+      requireTrimmedString(ctx, form.complainantContact.suburb, ['complainantContact', 'suburb'], 'Please select your suburb');
+      requireTrimmedString(ctx, form.complainantContact.postcode, ['complainantContact', 'postcode'], 'Please provide your postcode');
     }
 
     if (shouldValidateStep(1) && options.isAuthenticated && !form.complainantContact.phoneBh?.trim()) {

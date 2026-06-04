@@ -239,6 +239,7 @@ export function StepAboutYou({ isAuthenticated }: Props) {
             suburb={form.complainantContact.suburb}
             state={form.complainantContact.state}
             postcode={form.complainantContact.postcode}
+            required={isAuthenticated}
           />
           <div>
             <label htmlFor="contact-mobile" className="label">Mobile{isAuthenticated && <RequiredMark />}</label>

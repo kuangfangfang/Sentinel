@@ -78,7 +78,14 @@ export function LoginPage() {
           {busy ? 'Signing in...' : 'Sign in'}
         </button>
         <p className="text-center text-sm text-slate-600">
-          No account? <Link to="/register" className="font-medium text-accent-700 hover:underline">Create one</Link>
+          No account?{' '}
+          <Link
+            to="/register"
+            state={from ? { from } : undefined}
+            className="font-medium text-accent-700 hover:underline"
+          >
+            Create one
+          </Link>
         </p>
       </form>
 

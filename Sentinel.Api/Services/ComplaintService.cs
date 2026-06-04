@@ -345,6 +345,14 @@ public class ComplaintService
                 errors["complainantContact.lastName"] = ["Please provide your last name."];
             if (string.IsNullOrWhiteSpace(dto?.Email))
                 errors["complainantContact.email"] = ["Please provide your email address."];
+            if (string.IsNullOrWhiteSpace(dto?.AddressLine))
+                errors["complainantContact.addressLine"] = ["Please provide your address."];
+            if (string.IsNullOrWhiteSpace(dto?.State))
+                errors["complainantContact.state"] = ["Please select your state or territory."];
+            if (string.IsNullOrWhiteSpace(dto?.Suburb))
+                errors["complainantContact.suburb"] = ["Please select your suburb."];
+            if (string.IsNullOrWhiteSpace(dto?.Postcode))
+                errors["complainantContact.postcode"] = ["Please provide your postcode."];
             if (errors.Count > 0) throw new AppValidationException(errors);
         }
 

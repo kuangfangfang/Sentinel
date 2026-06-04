@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { FormProvider, useForm, useWatch, type Path, type Resolver } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -22,6 +22,11 @@ import {
   visibleValidationMessages,
   type ValidationSummary,
 } from './wizardValidationSummary';
+import {
+  clearAnonymousWizardSession,
+  getAnonymousWizardStorage,
+  readAnonymousWizardSession,
+} from './anonymousWizardSession';
 
 const STEP_FIELDS: Record<number, Array<Path<WizardForm>>> = {
   1: ['complainantContact', 'interpreterRequired', 'preferredLanguage', 'onBehalfOf', 'representative'],
@@ -61,6 +66,9 @@ export function WizardPage() {
   const [validationSummary, setValidationSummary] = useState<ValidationSummary | null>(null);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const anonymousRestoreAttempted = useRef(false);
+  const anonymousRestoreEffectActive = useRef(false);
+  const restoredAnonymousSession = useRef(false);
 
   useEffect(() => {
     complaintsApi.getGrounds().then(setGrounds).catch(() => setGrounds([]));
@@ -78,6 +86,57 @@ export function WizardPage() {
 
   useEffect(() => {
     if (!isAuthenticated || !user || draftIdParam) return;
+    anonymousRestoreEffectActive.current = true;
+    if (anonymousRestoreAttempted.current) {
+      return () => {
+        anonymousRestoreEffectActive.current = false;
+      };
+    }
+
+    const storage = getAnonymousWizardStorage();
+    const saved = readAnonymousWizardSession<WizardForm>(storage);
+    if (!saved) {
+      return () => {
+        anonymousRestoreEffectActive.current = false;
+      };
+    }
+    const session = saved;
+
+    anonymousRestoreAttempted.current = true;
+    restoredAnonymousSession.current = true;
+    reset(session.values);
+    setStep(session.step);
+    setServerErrors([]);
+    setValidationSummary(null);
+
+    async function restoreAsAccountDraft() {
+      setSaving(true);
+      try {
+        const created = await complaintsApi.createDraft();
+        if (!anonymousRestoreEffectActive.current) return;
+        setServerDraftId(created.id);
+        await complaintsApi.saveDraft(created.id, toWriteDto(session.values, session.step));
+        if (!anonymousRestoreEffectActive.current) return;
+        clearAnonymousWizardSession(storage);
+      } catch {
+        if (!anonymousRestoreEffectActive.current) return;
+        setServerErrors([
+          'We restored your answers, but could not save them to your account yet. Please use Save & continue or Save & finish later before attaching evidence.',
+        ]);
+      } finally {
+        if (anonymousRestoreEffectActive.current) setSaving(false);
+      }
+    }
+
+    restoreAsAccountDraft();
+    return () => {
+      anonymousRestoreEffectActive.current = false;
+    };
+  }, [draftIdParam, isAuthenticated, reset, user]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user || draftIdParam) return;
+    if (restoredAnonymousSession.current) return;
 
     const current = getValues();
     if (

@@ -59,6 +59,10 @@ public class ComplaintServiceTests
             FirstName = "Alex",
             LastName = "Taylor",
             Email = "alex.taylor@example.com",
+            AddressLine = "1 Example Street",
+            State = "New South Wales",
+            Suburb = "Sydney",
+            Postcode = "2000",
         },
     };
 
@@ -137,6 +141,36 @@ public class ComplaintServiceTests
         saved.Respondents.Single().Mobile.Should().Be("0400 000 000");
         saved.StatusHistory.Should().Contain(h =>
             h.FromStatus == ComplaintStatus.Draft && h.ToStatus == ComplaintStatus.Submitted);
+    }
+
+    [Fact]
+    public async Task Registered_complaints_require_contact_address_details_on_submit()
+    {
+        using var db = NewDb();
+        var userId = Guid.NewGuid();
+        var service = NewService(db, userId, Sentinel.Core.Roles.Complainant);
+        var draft = await service.CreateDraftAsync(default);
+        var dto = ValidRegisteredComplaint() with
+        {
+            ComplainantContact = ValidRegisteredComplaint().ComplainantContact! with
+            {
+                AddressLine = "",
+                State = "",
+                Suburb = "",
+                Postcode = "",
+            },
+        };
+
+        var ex = await service.Invoking(s => s.SubmitAsync(draft.Id, dto, default))
+            .Should().ThrowAsync<AppValidationException>();
+
+        ex.Which.Errors.Keys.Should().Contain(new[]
+        {
+            "complainantContact.addressLine",
+            "complainantContact.state",
+            "complainantContact.suburb",
+            "complainantContact.postcode",
+        });
     }
 
     [Fact]

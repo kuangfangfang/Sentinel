@@ -9,6 +9,11 @@ import {
   shouldShowStepValidation,
   visibleValidationMessages,
 } from '../src/pages/wizard/wizardValidationSummary';
+import {
+  clearAnonymousWizardSession,
+  readAnonymousWizardSession,
+  saveAnonymousWizardSession,
+} from '../src/pages/wizard/anonymousWizardSession';
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -16,6 +21,30 @@ function assert(condition: unknown, message: string): asserts condition {
 
 function clone(value: unknown): any {
   return JSON.parse(JSON.stringify(value));
+}
+
+function createMemoryStorage(): Storage {
+  const values = new Map<string, string>();
+  return {
+    get length() {
+      return values.size;
+    },
+    clear() {
+      values.clear();
+    },
+    getItem(key: string) {
+      return values.get(key) ?? null;
+    },
+    key(index: number) {
+      return Array.from(values.keys())[index] ?? null;
+    },
+    removeItem(key: string) {
+      values.delete(key);
+    },
+    setItem(key: string, value: string) {
+      values.set(key, value);
+    },
+  };
 }
 
 function assertInvalid(result: ReturnType<ReturnType<typeof createWizardSchema>['safeParse']>, path: string, label: string) {
@@ -99,6 +128,30 @@ const stepFiveSchema = createWizardSchema({ isAuthenticated: false, step: 5 });
   const data = clone(validWizard);
   data.complainantContact.phoneBh = '';
   assertInvalid(authenticatedStepOneSchema.safeParse(data), 'complainantContact.phoneBh', 'authenticated complainant mobile is required on step 1');
+}
+
+const authenticatedContactAddressRequiredCases: Array<{
+  label: string;
+  path: string;
+  mutate: (data: any) => void;
+}> = [
+  { label: 'authenticated complainant address is required', path: 'complainantContact.addressLine', mutate: (data) => { data.complainantContact.addressLine = ''; } },
+  { label: 'authenticated complainant state is required', path: 'complainantContact.state', mutate: (data) => { data.complainantContact.state = ''; } },
+  { label: 'authenticated complainant suburb is required', path: 'complainantContact.suburb', mutate: (data) => { data.complainantContact.suburb = ''; } },
+  { label: 'authenticated complainant postcode is required', path: 'complainantContact.postcode', mutate: (data) => { data.complainantContact.postcode = ''; } },
+];
+
+for (const testCase of authenticatedContactAddressRequiredCases) {
+  const data = clone(validWizard);
+  data.complainantContact = {
+    ...data.complainantContact,
+    addressLine: '1 Example Street',
+    suburb: 'ABERCROMBIE',
+    state: 'New South Wales',
+    postcode: '2795',
+  };
+  testCase.mutate(data);
+  assertInvalid(authenticatedStepOneSchema.safeParse(data), testCase.path, testCase.label);
 }
 
 {
@@ -490,6 +543,36 @@ assertSchemaInvalid(statusChangeSchema.safeParse({
   assert(!shouldShowStepValidation(null, 4), 'field validation is hidden before a failed continue attempt');
   assert(!shouldShowStepValidation(summary, 3), 'field validation is hidden outside the attempted step');
   assert(shouldShowStepValidation(summary, 4), 'field validation is visible for the attempted step');
+}
+
+{
+  const storage = createMemoryStorage();
+  const data = clone(validWizard);
+  data.title = 'Anonymous complaint before account creation';
+  data.priorComplaintMade = true;
+  data.priorComplaintAgency = 'Fair Work Commission';
+
+  saveAnonymousWizardSession(storage, 4, data);
+  const saved = readAnonymousWizardSession(storage);
+
+  assert(saved?.step === 4, 'anonymous wizard session stores the current step');
+  assert(saved?.values.title === data.title, 'anonymous wizard session stores wizard values');
+  assert(saved?.values.priorComplaintAgency === 'Fair Work Commission', 'anonymous wizard session preserves step 4 values');
+
+  clearAnonymousWizardSession(storage);
+  assert(readAnonymousWizardSession(storage) === null, 'anonymous wizard session is cleared after restore');
+}
+
+{
+  const storage = createMemoryStorage();
+  storage.setItem('sentinel.anonymousWizard.v1', '{not valid json');
+  assert(readAnonymousWizardSession(storage) === null, 'anonymous wizard session ignores malformed JSON');
+
+  storage.setItem('sentinel.anonymousWizard.v1', JSON.stringify({ version: 999, step: 4, values: clone(validWizard) }));
+  assert(readAnonymousWizardSession(storage) === null, 'anonymous wizard session ignores unsupported versions');
+
+  storage.setItem('sentinel.anonymousWizard.v1', JSON.stringify({ version: 1, step: 99, values: clone(validWizard) }));
+  assert(readAnonymousWizardSession(storage) === null, 'anonymous wizard session ignores invalid steps');
 }
 
 console.log('validation schema checks passed');

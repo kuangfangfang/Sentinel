@@ -9,6 +9,7 @@ import ReactDatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { isAfter, isValid, parse } from 'date-fns';
 import { inputClass, invalidAria, RequiredMark, useFieldValidationDisplay } from '../fieldUi';
+import { getAnonymousWizardStorage, saveAnonymousWizardSession } from '../anonymousWizardSession';
 
 interface Props extends StepProps {
   draftId: string | null;
@@ -26,6 +27,7 @@ function fieldErrorMessage(error: unknown): string | undefined {
 export function StepSupporting({ draftId, isAuthenticated }: Props) {
   const {
     register,
+    getValues,
     setValue,
     control,
     formState: { errors },
@@ -60,6 +62,10 @@ export function StepSupporting({ draftId, isAuthenticated }: Props) {
     } finally {
       setUploading(false);
     }
+  }
+
+  function saveAnonymousProgressForAuth() {
+    saveAnonymousWizardSession(getAnonymousWizardStorage(), 4, getValues());
   }
 
   function setPriorComplaintMade(value: boolean) {
@@ -150,7 +156,24 @@ export function StepSupporting({ draftId, isAuthenticated }: Props) {
         ) : (
           <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
             Uploading evidence files requires an account. You can still lodge your complaint anonymously without files, or{' '}
-            <Link to="/register" className="font-medium text-accent-700 hover:underline">create an account</Link> to attach evidence.
+            <Link
+              to="/register"
+              state={{ from: '/report' }}
+              onClick={saveAnonymousProgressForAuth}
+              className="font-medium text-accent-700 hover:underline"
+            >
+              create an account
+            </Link>
+            {' '}or{' '}
+            <Link
+              to="/login"
+              state={{ from: '/report' }}
+              onClick={saveAnonymousProgressForAuth}
+              className="font-medium text-accent-700 hover:underline"
+            >
+              sign in
+            </Link>
+            {' '}to attach evidence.
           </p>
         )}
       </fieldset>

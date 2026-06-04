@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../api/client';
 import { registerSchema } from '../validation/schemas';
@@ -12,6 +12,8 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 export function RegisterPage() {
   const { register: registerUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as { from?: string } | null)?.from;
 
   const [serverErrors, setServerErrors] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -31,7 +33,7 @@ export function RegisterPage() {
     setBusy(true);
     try {
       await registerUser(data.fullName, data.email, data.password);
-      navigate('/dashboard', { replace: true });
+      navigate(from ?? '/dashboard', { replace: true });
     } catch (err) {
       if (err instanceof ApiError) {
         setServerErrors(err.fieldMessages.length ? err.fieldMessages : [err.message]);
@@ -90,7 +92,14 @@ export function RegisterPage() {
           {busy ? 'Creating account...' : 'Create account'}
         </button>
         <p className="text-center text-sm text-slate-600">
-          Already have an account? <Link to="/login" className="font-medium text-accent-700 hover:underline">Sign in</Link>
+          Already have an account?{' '}
+          <Link
+            to="/login"
+            state={from ? { from } : undefined}
+            className="font-medium text-accent-700 hover:underline"
+          >
+            Sign in
+          </Link>
         </p>
       </form>
     </div>
