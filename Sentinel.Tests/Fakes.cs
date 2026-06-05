@@ -1,7 +1,14 @@
 using Sentinel.Api.Services;
 using Sentinel.Core.Enums;
+using Sentinel.Data;
 
 namespace Sentinel.Tests;
+
+internal sealed class FakeTokenService : ITokenService
+{
+    public (string token, DateTime expiresAtUtc) CreateToken(ApplicationUser user, IList<string> roles) =>
+        ("test-token", DateTime.UtcNow.AddHours(1));
+}
 
 internal sealed class FakeCurrentUser : ICurrentUser
 {

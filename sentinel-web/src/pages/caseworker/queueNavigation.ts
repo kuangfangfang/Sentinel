@@ -1,9 +1,18 @@
 const QUEUE_FOCUS_STORAGE_KEY = 'sentinel-queue-focus';
+const QUEUE_SEARCH_STORAGE_KEY = 'sentinel-queue-search';
 const STICKY_HEADER_OFFSET_PX = 96;
 
 export type QueueReturnState = {
   queueSearch?: string;
   focusComplaintId?: string;
+};
+
+export type QueueNavigationType = 'POP' | 'PUSH' | 'REPLACE';
+
+export type ResolveQueueFocusOptions = {
+  state: unknown;
+  /** React Router navigation type — POP covers browser back/forward within the SPA. */
+  navigationType: QueueNavigationType;
 };
 
 export function readQueueReturnState(state: unknown): QueueReturnState | null {
@@ -19,34 +28,59 @@ function withSessionStorage<T>(run: (storage: Storage) => T, fallback: T): T {
   }
 }
 
-export function getNavigationType(): PerformanceNavigationTiming['type'] | 'unknown' {
+export function isDocumentReload(): boolean {
   const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
-  return nav?.type ?? 'unknown';
+  return nav?.type === 'reload';
 }
 
-export function rememberQueueFocus(complaintId: string) {
-  withSessionStorage((s) => s.setItem(QUEUE_FOCUS_STORAGE_KEY, complaintId), undefined);
+export function rememberQueueReturn(search: string, complaintId: string) {
+  withSessionStorage((s) => {
+    s.setItem(QUEUE_FOCUS_STORAGE_KEY, complaintId);
+    s.setItem(QUEUE_SEARCH_STORAGE_KEY, search);
+  }, undefined);
 }
 
 export function peekQueueFocus(): string | null {
   return withSessionStorage((s) => s.getItem(QUEUE_FOCUS_STORAGE_KEY), null);
 }
 
+export function peekQueueSearch(): string | null {
+  const value = withSessionStorage((s) => s.getItem(QUEUE_SEARCH_STORAGE_KEY), null);
+  if (!value) return null;
+  return value.startsWith('?') ? value : `?${value}`;
+}
+
+export function clearQueueReturn() {
+  withSessionStorage((s) => {
+    s.removeItem(QUEUE_FOCUS_STORAGE_KEY);
+    s.removeItem(QUEUE_SEARCH_STORAGE_KEY);
+  }, undefined);
+}
+
+/** @deprecated Use rememberQueueReturn via buildQueueOpenState */
+export function rememberQueueFocus(complaintId: string) {
+  rememberQueueReturn('', complaintId);
+}
+
+/** @deprecated Use clearQueueReturn */
 export function clearQueueFocus() {
-  withSessionStorage((s) => s.removeItem(QUEUE_FOCUS_STORAGE_KEY), undefined);
+  clearQueueReturn();
 }
 
 export function buildQueueOpenState(search: string, complaintId: string): QueueReturnState {
-  rememberQueueFocus(complaintId);
+  rememberQueueReturn(search, complaintId);
   return { queueSearch: search, focusComplaintId: complaintId };
 }
 
-/** Only restore focus when returning from detail (router state or browser back), not on refresh. */
-export function resolveQueueFocusId(state: unknown): string | null {
+/** Restore focus when returning from detail (router state or browser back), not on refresh. */
+export function resolveQueueFocusId({ state, navigationType }: ResolveQueueFocusOptions): string | null {
   const returnState = readQueueReturnState(state);
   if (returnState?.focusComplaintId) return returnState.focusComplaintId;
-  if (getNavigationType() === 'back_forward') return peekQueueFocus();
-  clearQueueFocus();
+  if (isDocumentReload()) {
+    clearQueueReturn();
+    return null;
+  }
+  if (navigationType === 'POP') return peekQueueFocus();
   return null;
 }
 

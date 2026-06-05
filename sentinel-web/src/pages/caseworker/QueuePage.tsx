@@ -2,10 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Link, useLocation, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigationType, useSearchParams } from 'react-router-dom';
 import {
   buildQueueOpenState,
-  clearQueueFocus,
+  clearQueueReturn,
   findVisibleQueueItem,
   resolveQueueFocusId,
   scrollQueueItemIntoView,
@@ -35,6 +35,7 @@ type QueueFilterData = z.infer<typeof queueFilterSchema>;
 export function QueuePage() {
   const { user } = useAuth();
   const location = useLocation();
+  const navigationType = useNavigationType();
   const [searchParams, setSearchParams] = useSearchParams();
   const query = useMemo(() => parseInitialQuery(searchParams, user?.id), [searchParams, user?.id]);
   const [result, setResult] = useState<PagedResult<QueueItemDto> | null>(null);
@@ -75,7 +76,7 @@ export function QueuePage() {
   useEffect(() => {
     if (loading || items.length === 0) return;
 
-    const focusId = resolveQueueFocusId(location.state);
+    const focusId = resolveQueueFocusId({ state: location.state, navigationType });
     if (!focusId || !items.some((c) => c.id === focusId)) return;
 
     const handleKey = `${location.key}:${focusId}`;
@@ -87,7 +88,7 @@ export function QueuePage() {
       if (!row) return;
       scrollQueueItemIntoView(row);
       setHighlightId(focusId);
-      clearQueueFocus();
+      clearQueueReturn();
     });
 
     const timer = window.setTimeout(() => setHighlightId(null), 2000);
@@ -95,7 +96,7 @@ export function QueuePage() {
       cancelAnimationFrame(frame);
       window.clearTimeout(timer);
     };
-  }, [loading, items, location.key, location.pathname, location.search, location.state]);
+  }, [loading, items, location.key, location.pathname, location.search, location.state, navigationType]);
 
   function updateQuery(next: QueueQuery) {
     setSearchParams(queueQueryToParams(next, user?.id), { replace: false });

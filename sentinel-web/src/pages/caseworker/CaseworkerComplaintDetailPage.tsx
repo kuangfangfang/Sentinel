@@ -15,7 +15,7 @@ import { StatusTimeline } from '../../components/StatusTimeline';
 import { formatDateOnly, formatDateTime } from '../../utils/format';
 import { allowedNextStatuses } from '../../utils/statusTransitions';
 import { caseNoteSchema, statusChangeSchema } from '../../validation/schemas';
-import { readQueueReturnState } from './queueNavigation';
+import { readQueueReturnState, peekQueueSearch } from './queueNavigation';
 
 const SEVERITIES: Severity[] = ['Low', 'Medium', 'High', 'Critical'];
 type CaseNoteFormData = z.infer<typeof caseNoteSchema>;
@@ -26,7 +26,7 @@ export function CaseworkerComplaintDetailPage() {
   const location = useLocation();
   const { user } = useAuth();
   const queueReturn = readQueueReturnState(location.state);
-  const queueReturnTo = `/caseworker/queue${queueReturn?.queueSearch ?? ''}`;
+  const queueReturnTo = `/caseworker/queue${queueReturn?.queueSearch ?? peekQueueSearch() ?? ''}`;
   const [data, setData] = useState<CaseworkerComplaintDetailDto | null>(null);
   const [grounds, setGrounds] = useState<GroundDto[]>([]);
   const [caseworkers, setCaseworkers] = useState<CaseworkerOptionDto[]>([]);
@@ -400,12 +400,22 @@ export function CaseworkerComplaintDetailPage() {
               )}
               <div className="flex flex-wrap gap-2">
                 {user && c.assignedToUserId !== user.id && (
-                  <button type="button" className="btn-secondary" disabled={busy} onClick={() => assign(user.id)}>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    disabled={busy || assigneeDirty}
+                    onClick={() => assign(user.id)}
+                  >
                     Claim to me
                   </button>
                 )}
                 {c.assignedToUserId && (
-                  <button type="button" className="btn-ghost" disabled={busy} onClick={() => assign(null)}>
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    disabled={busy || assigneeDirty}
+                    onClick={() => assign(null)}
+                  >
                     Unassign
                   </button>
                 )}
@@ -489,8 +499,7 @@ export function CaseworkerComplaintDetailPage() {
           </section>
 
           <section className="card p-5">
-            <h2 className="mb-3 font-semibold text-navy-900">Status history</h2>
-            <StatusTimeline history={c.statusHistory} />
+            <StatusTimeline history={c.statusHistory} collapsible />
           </section>
         </div>
       </div>

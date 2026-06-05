@@ -250,6 +250,44 @@ public class CaseworkerServiceTests
         dash.BySeverity["Critical"].Should().Be(1);
     }
 
+    [Theory]
+    [InlineData("assignedToMeOpen")]
+    [InlineData("myAwaitingInfo")]
+    [InlineData("unassigned")]
+    [InlineData("moreInfoNeeded")]
+    [InlineData("highSeverityOpen")]
+    [InlineData("agingOpen")]
+    public async Task Dashboard_signal_card_count_matches_queue_filter_total(string signal)
+    {
+        using var db = NewDb();
+        var users = NewUserManager(db);
+        var me = await SeedUserAsync(db, users, "Dana Field", Sentinel.Core.Roles.Caseworker);
+        var now = DateTime.UtcNow;
+
+        db.Complaints.AddRange(
+            new Complaint { Title = "A", Description = "Open, unassigned, recent, low.", Status = ComplaintStatus.Submitted, Severity = Severity.Low, SubmittedAt = now.AddDays(-1) },
+            new Complaint { Title = "B", Description = "Open, mine, aging, critical.", Status = ComplaintStatus.UnderReview, Severity = Severity.Critical, SubmittedAt = now.AddDays(-40), AssignedToUserId = me.Id, AssignedToName = "Dana Field" },
+            new Complaint { Title = "C", Description = "Awaiting info, mine, high.", Status = ComplaintStatus.MoreInfoNeeded, Severity = Severity.High, SubmittedAt = now.AddDays(-5), AssignedToUserId = me.Id, AssignedToName = "Dana Field" },
+            new Complaint { Title = "D", Description = "Resolved, old, not open.", Status = ComplaintStatus.Resolved, Severity = Severity.Medium, SubmittedAt = now.AddDays(-50) });
+        await db.SaveChangesAsync();
+        var service = NewService(db, users, currentUserId: me.Id);
+
+        var dash = await service.GetDashboardAsync(default);
+        var (expected, query) = signal switch
+        {
+            "assignedToMeOpen" => (dash.AssignedToMeOpen, new QueueQuery { AssigneeUserId = me.Id, OpenOnly = true }),
+            "myAwaitingInfo" => (dash.MyAwaitingInfo, new QueueQuery { AssigneeUserId = me.Id, Status = ComplaintStatus.MoreInfoNeeded }),
+            "unassigned" => (dash.Unassigned, new QueueQuery { Unassigned = true, OpenOnly = true }),
+            "moreInfoNeeded" => (dash.ByStatus[nameof(ComplaintStatus.MoreInfoNeeded)], new QueueQuery { Status = ComplaintStatus.MoreInfoNeeded }),
+            "highSeverityOpen" => (dash.HighSeverityOpen, new QueueQuery { OpenOnly = true, HighSeverityOnly = true }),
+            "agingOpen" => (dash.AgingOpen, new QueueQuery { OpenOnly = true, AgingDays = 30 }),
+            _ => throw new ArgumentOutOfRangeException(nameof(signal), signal, null),
+        };
+
+        var queue = await service.GetQueueAsync(query, default);
+        queue.TotalCount.Should().Be(expected, because: $"dashboard {signal} should match its queue filter");
+    }
+
     [Fact]
     public async Task Analytics_counts_each_complaint_resolved_in_a_month_once()
     {

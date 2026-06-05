@@ -1,13 +1,28 @@
+import { useEffect, useState } from 'react';
 import type { StatusHistoryDto } from '../types';
 import { StatusBadge } from './StatusBadge';
 import { formatDateTime } from '../utils/format';
 
+const STATUS_HISTORY_COLLAPSE_THRESHOLD = 4;
+
+type StatusTimelineProps = {
+  history: StatusHistoryDto[];
+  /** Disclosure pattern: expand/collapse with count in summary (caseworker detail). */
+  collapsible?: boolean;
+};
+
 /** A vertical timeline of status changes (FR-26, FR-27). */
-export function StatusTimeline({ history }: { history: StatusHistoryDto[] }) {
-  if (history.length === 0) {
-    return <p className="text-sm text-slate-500">No status changes recorded yet.</p>;
-  }
-  return (
+export function StatusTimeline({ history, collapsible = false }: StatusTimelineProps) {
+  const defaultOpen = history.length < STATUS_HISTORY_COLLAPSE_THRESHOLD;
+  const [open, setOpen] = useState(defaultOpen);
+
+  useEffect(() => {
+    setOpen(history.length < STATUS_HISTORY_COLLAPSE_THRESHOLD);
+  }, [history]);
+
+  const body = history.length === 0 ? (
+    <p className="text-sm text-slate-500">No status changes recorded yet.</p>
+  ) : (
     <ol className="space-y-4">
       {history.map((h, i) => (
         <li key={i} className="flex gap-3">
@@ -26,5 +41,16 @@ export function StatusTimeline({ history }: { history: StatusHistoryDto[] }) {
         </li>
       ))}
     </ol>
+  );
+
+  if (!collapsible) return body;
+
+  return (
+    <details open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary className="cursor-pointer font-semibold text-navy-900">
+        Status history ({history.length})
+      </summary>
+      <div className="mt-3">{body}</div>
+    </details>
   );
 }
