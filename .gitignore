@@ -34,5 +34,6 @@ sentinel-web/.tmp-validation-tests/
 # IDE
 .vs/
 .idea/
+.cursor/
 *.suo
 .DS_Store

@@ -13,9 +13,13 @@ export const WIZARD_STEPS: WizardStepInfo[] = [
 
 /** Visible progress indicator showing the current step and total steps (FR-13). */
 export function WizardStepIndicator({ current }: { current: number }) {
+  const currentStep = WIZARD_STEPS.find((step) => step.number === current);
+
   return (
     <nav aria-label="Progress" className="mb-6">
-      <p className="sr-only">Step {current} of {WIZARD_STEPS.length}</p>
+      <p className="sr-only">
+        Step {current} of {WIZARD_STEPS.length}{currentStep ? `: ${currentStep.title}` : ''}
+      </p>
       <ol className="flex flex-wrap items-center gap-2 sm:gap-0">
         {WIZARD_STEPS.map((step, i) => {
           const isComplete = step.number < current;
@@ -30,9 +34,13 @@ export function WizardStepIndicator({ current }: { current: number }) {
                   ].join(' ')}
                   aria-current={isCurrent ? 'step' : undefined}
                 >
-                  {isComplete ? '✓' : step.number}
+                  {isComplete ? (
+                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.25 7.31a1 1 0 0 1-1.42 0L4.29 10.23a1 1 0 1 1 1.42-1.41l3.04 3.064 6.54-6.588a1 1 0 0 1 1.414-.006z" clipRule="evenodd" />
+                    </svg>
+                  ) : step.number}
                 </span>
-                <span className={`text-sm ${isCurrent ? 'font-semibold text-navy-900' : 'text-slate-500'} hidden sm:inline`}>
+                <span className={`hidden text-sm ${isCurrent ? 'font-semibold text-navy-900' : 'text-slate-500'} sm:inline`}>
                   {step.title}
                 </span>
               </div>
@@ -43,6 +51,11 @@ export function WizardStepIndicator({ current }: { current: number }) {
           );
         })}
       </ol>
+      {currentStep && (
+        <p className="mt-2 text-sm font-semibold text-navy-900 sm:hidden">
+          Step {current} of {WIZARD_STEPS.length}: {currentStep.title}
+        </p>
+      )}
     </nav>
   );
 }

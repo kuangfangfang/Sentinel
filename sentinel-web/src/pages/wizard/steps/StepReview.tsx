@@ -9,6 +9,7 @@ import { classNames, invalidAria, RequiredMark, useFieldValidationDisplay } from
 
 interface Props extends StepProps {
   groundsCatalog: GroundDto[];
+  onEditStep: (step: number) => void;
 }
 
 const RHF_UPDATE = { shouldDirty: true, shouldValidate: true };
@@ -19,6 +20,30 @@ function Row({ label, value }: { label: string; value: ReactNode }) {
       <dt className="w-48 shrink-0 text-sm font-medium text-slate-500">{label}</dt>
       <dd className="text-sm text-slate-900">{value || <span className="text-slate-400">Not provided</span>}</dd>
     </div>
+  );
+}
+
+function ReviewSection({
+  title,
+  step,
+  onEdit,
+  children,
+}: {
+  title: string;
+  step: number;
+  onEdit: (step: number) => void;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-4">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <h3 className="text-base font-semibold text-navy-900">{title}</h3>
+        <button type="button" className="btn-ghost px-3 py-1.5" onClick={() => onEdit(step)}>
+          Edit
+        </button>
+      </div>
+      <dl className="divide-y divide-slate-100">{children}</dl>
+    </section>
   );
 }
 
@@ -118,7 +143,7 @@ function RespondentsSummary({ respondents }: { respondents: RespondentDto[] }) {
   );
 }
 
-export function StepReview({ groundsCatalog }: Props) {
+export function StepReview({ groundsCatalog, onEditStep }: Props) {
   const {
     control,
     register,
@@ -142,34 +167,45 @@ export function StepReview({ groundsCatalog }: Props) {
         <p className="mt-1 text-sm text-slate-600">Please check your complaint before lodging it.</p>
       </div>
 
-      <dl className="divide-y divide-slate-100 rounded-lg border border-slate-200 p-4">
-        <Row label="Your contact details" value={<ComplainantContactSummary contact={form.complainantContact} />} />
-        {form.interpreterRequired && <Row label="Interpreter" value={`Yes - ${form.preferredLanguage || 'language not specified'}`} />}
-        {form.onBehalfOf && <Row label="On behalf of" value={<OnBehalfSummary person={form.onBehalfOf} />} />}
-        {form.representative && <Row label="Representative" value={<RepresentativeSummary representative={form.representative} />} />}
-        <Row label="Title" value={form.title} />
-        <Row label="Grounds" value={form.grounds.map((g) => labelFor(g.groundType)).join(', ')} />
-        <Row label="What happened" value={<span className="whitespace-pre-wrap">{form.description}</span>} />
-        <Row label="When" value={formatDateOnly(form.incidentDate || null)} />
-        {form.delayReason.trim().length > 0 && (
-          <Row label="Reason for delay" value={<span className="whitespace-pre-wrap">{form.delayReason}</span>} />
-        )}
-        <Row label="Where exactly" value={form.incidentLocation} />
-        <Row label="Respondents" value={<RespondentsSummary respondents={form.respondents} />} />
-        <Row label="Desired outcome" value={form.desiredOutcome} />
-        {form.priorComplaintMade !== null && (
-          <Row label="Complaint elsewhere" value={form.priorComplaintMade ? 'Yes' : 'No'} />
-        )}
-        {form.priorComplaintMade === true && (
-          <>
-            <Row label="Other agency" value={form.priorComplaintAgency} />
-            <Row label="Other complaint date" value={formatDateOnly(form.priorComplaintDate || null)} />
-            <Row label="Other complaint status" value={form.priorComplaintStatus} />
-            <Row label="Finalised date" value={formatDateOnly(form.priorComplaintFinalisedDate || null)} />
-            <Row label="Other complaint outcome" value={<span className="whitespace-pre-wrap">{form.priorComplaintOutcome}</span>} />
-          </>
-        )}
-      </dl>
+      <div className="space-y-4">
+        <ReviewSection title="About you" step={1} onEdit={onEditStep}>
+          <Row label="Your contact details" value={<ComplainantContactSummary contact={form.complainantContact} />} />
+          {form.interpreterRequired && <Row label="Interpreter" value={`Yes - ${form.preferredLanguage || 'language not specified'}`} />}
+          {form.onBehalfOf && <Row label="On behalf of" value={<OnBehalfSummary person={form.onBehalfOf} />} />}
+          {form.representative && <Row label="Representative" value={<RepresentativeSummary representative={form.representative} />} />}
+        </ReviewSection>
+
+        <ReviewSection title="Who it is about" step={2} onEdit={onEditStep}>
+          <Row label="Respondents" value={<RespondentsSummary respondents={form.respondents} />} />
+        </ReviewSection>
+
+        <ReviewSection title="What happened" step={3} onEdit={onEditStep}>
+          <Row label="Title" value={form.title} />
+          <Row label="Grounds" value={form.grounds.map((g) => labelFor(g.groundType)).join(', ')} />
+          <Row label="What happened" value={<span className="whitespace-pre-wrap">{form.description}</span>} />
+          <Row label="When" value={<span className="notranslate" translate="no">{formatDateOnly(form.incidentDate || null)}</span>} />
+          {form.delayReason.trim().length > 0 && (
+            <Row label="Reason for delay" value={<span className="whitespace-pre-wrap">{form.delayReason}</span>} />
+          )}
+          <Row label="Where exactly" value={form.incidentLocation} />
+          <Row label="Desired outcome" value={form.desiredOutcome} />
+        </ReviewSection>
+
+        <ReviewSection title="Supporting information" step={4} onEdit={onEditStep}>
+          {form.priorComplaintMade !== null && (
+            <Row label="Complaint elsewhere" value={form.priorComplaintMade ? 'Yes' : 'No'} />
+          )}
+          {form.priorComplaintMade === true && (
+            <>
+              <Row label="Other agency" value={form.priorComplaintAgency} />
+              <Row label="Other complaint date" value={<span className="notranslate" translate="no">{formatDateOnly(form.priorComplaintDate || null)}</span>} />
+              <Row label="Other complaint status" value={form.priorComplaintStatus} />
+              <Row label="Finalised date" value={<span className="notranslate" translate="no">{formatDateOnly(form.priorComplaintFinalisedDate || null)}</span>} />
+              <Row label="Other complaint outcome" value={<span className="whitespace-pre-wrap">{form.priorComplaintOutcome}</span>} />
+            </>
+          )}
+        </ReviewSection>
+      </div>
 
       <section className="rounded-lg bg-slate-50 p-4">
         <h3 className="font-semibold text-navy-900">Privacy collection notice</h3>

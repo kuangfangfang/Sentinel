@@ -54,6 +54,17 @@ function restoreSavedLanguage() {
   return saved && findTranslateLanguage(saved) ? saved : DEFAULT_TRANSLATE_LANGUAGE;
 }
 
+function hideInjectedGoogleTranslateControls() {
+  document
+    .querySelectorAll<HTMLElement>(
+      '.skiptranslate, .goog-te-banner-frame, .goog-te-gadget, .goog-te-combo, .goog-te-balloon-frame, #goog-gt-tt, .goog-tooltip',
+    )
+    .forEach((element) => {
+      element.setAttribute('aria-hidden', 'true');
+      element.setAttribute('tabindex', '-1');
+    });
+}
+
 export function GoogleTranslate() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -111,8 +122,21 @@ export function GoogleTranslate() {
       .skiptranslate { display: none !important; }
       body { top: 0 !important; }
       .goog-te-banner-frame { display: none !important; }
+      .goog-te-gadget { display: none !important; }
+      .goog-te-combo { display: none !important; }
+      .goog-te-balloon-frame { display: none !important; }
+      #goog-gt-tt { display: none !important; }
+      .goog-tooltip { display: none !important; }
+      iframe.skiptranslate { display: none !important; }
     `;
     document.head.appendChild(style);
+  }, []);
+
+  useEffect(() => {
+    hideInjectedGoogleTranslateControls();
+    const observer = new MutationObserver(() => hideInjectedGoogleTranslateControls());
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -165,7 +189,7 @@ export function GoogleTranslate() {
 
   return (
     <div ref={rootRef} className="sentinel-google-translate notranslate" translate="no">
-      <div id={elementIdRef.current} className="hidden" />
+      <div id={elementIdRef.current} className="hidden" aria-hidden="true" />
       <button
         type="button"
         className="sentinel-translate-button"

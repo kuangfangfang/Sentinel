@@ -107,7 +107,7 @@ try
 
     // ----- CORS: allow only the configured frontend origins (guide §3.5). -----
     var corsOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
-                      ?? new[] { "http://localhost:5173" };
+                      ?? new[] { "http://localhost:5173", "http://127.0.0.1:5173" };
     const string CorsPolicy = "SentinelFrontend";
     builder.Services.AddCors(options => options.AddPolicy(CorsPolicy, policy =>
         policy.WithOrigins(corsOrigins).AllowAnyHeader().AllowAnyMethod()));

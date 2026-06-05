@@ -13,6 +13,7 @@
   },
   "files": [
     "test/schema-validation.test.ts",
+    "test/wizard-ux.test.ts",
     "test/translation-widget.test.ts",
     "test/demo-disclaimer.test.ts",
     "test/quick-exit.test.ts"

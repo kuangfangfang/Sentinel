@@ -276,8 +276,6 @@ const stepTwoRequiredCases: Array<{
   { label: 'respondent state is required', path: 'respondents.0.state', mutate: (data) => { data.respondents[0].state = ''; } },
   { label: 'respondent suburb is required', path: 'respondents.0.suburb', mutate: (data) => { data.respondents[0].suburb = ''; } },
   { label: 'respondent postcode is required', path: 'respondents.0.postcode', mutate: (data) => { data.respondents[0].postcode = ''; } },
-  { label: 'respondent email is required', path: 'respondents.0.contactEmail', mutate: (data) => { data.respondents[0].contactEmail = ''; } },
-  { label: 'respondent mobile is required', path: 'respondents.0.mobile', mutate: (data) => { data.respondents[0].mobile = ''; } },
   {
     label: 'organisation ABN or ACN is required',
     path: 'respondents.0.abnAcn',
@@ -321,6 +319,29 @@ for (const testCase of stepTwoRequiredCases) {
     relationshipToComplainant: 'Employer',
   };
   assert(stepTwoSchema.safeParse(data).success, 'complete person respondent passes step 2 validation');
+}
+
+{
+  const data = clone(validWizard);
+  data.respondents[0] = {
+    ...data.respondents[0],
+    contactEmail: '',
+    contactPhone: '',
+    mobile: '',
+  };
+  assert(stepTwoSchema.safeParse(data).success, 'respondent email and mobile are optional on step 2 when not known');
+}
+
+{
+  const data = clone(validWizard);
+  data.respondents[0].contactEmail = 'not-an-email';
+  assertInvalid(stepTwoSchema.safeParse(data), 'respondents.0.contactEmail', 'respondent email validates format when provided');
+}
+
+{
+  const data = clone(validWizard);
+  data.respondents[0].mobile = '041';
+  assertInvalid(stepTwoSchema.safeParse(data), 'respondents.0.mobile', 'respondent mobile validates format when provided');
 }
 
 {
@@ -420,8 +441,6 @@ const requiredMessageCases: Array<{
       data.respondents[0].state = '';
       data.respondents[0].suburb = '';
       data.respondents[0].postcode = '';
-      data.respondents[0].contactEmail = '';
-      data.respondents[0].mobile = '';
     },
   },
   {

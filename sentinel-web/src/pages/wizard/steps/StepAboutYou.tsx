@@ -10,6 +10,7 @@ import {
   locationValue,
   type AustralianSuburb,
 } from '../../../data/australianLocations';
+import { rankAustralianSuburbsForQuery } from '../../../data/australianLocationRanking';
 import { inputClass, invalidAria, RequiredMark, useFieldValidationDisplay } from '../fieldUi';
 
 const knownPreferredLanguages = new Set(
@@ -178,6 +179,12 @@ export function StepAboutYou({ isAuthenticated }: Props) {
 
       <fieldset className="space-y-4">
         <legend className="font-medium text-navy-900">Your contact details</legend>
+        {!isAuthenticated && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="note">
+            You can continue without giving contact details. If you leave them blank, the team may not be able to
+            follow up with you or ask for information that could help assess the complaint.
+          </div>
+        )}
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="contact-title" className="label">Title</label>
@@ -664,15 +671,20 @@ function SuburbCombobox({
 
   const options: ComboboxOption[] = useMemo(() => {
     if (!state) return [];
-    return locations
-      .filter((location) => location.state === state)
+    return rankAustralianSuburbsForQuery(locations, state)
       .map((location) => ({
         label: formatLocationLabel(location),
         value: locationValue(location),
         searchText: `${location.suburb} ${location.postcode} ${location.state} ${location.stateCode}`,
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label));
+      }));
   }, [locations, state]);
+
+  const filterSuburbOptions = useMemo(() => {
+    const optionByValue = new Map(options.map((option) => [option.value, option]));
+    return (_options: ComboboxOption[], query: string) => rankAustralianSuburbsForQuery(locations, state, query)
+      .map((location) => optionByValue.get(locationValue(location)))
+      .filter((option): option is ComboboxOption => Boolean(option));
+  }, [locations, options, state]);
 
   const selectedValue = suburb && state && postcode ? `${suburb}|${state}|${postcode}` : suburb || null;
 
@@ -694,6 +706,7 @@ function SuburbCombobox({
       disabled={!state || loading}
       noOptionsMessage={loading ? 'Loading...' : 'No suburbs'}
       hasError={hasError}
+      filterOptions={filterSuburbOptions}
     />
   );
 }

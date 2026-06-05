@@ -12,6 +12,7 @@ import {
   locationValue,
   type AustralianSuburb,
 } from '../../../data/australianLocations';
+import { rankAustralianSuburbsForQuery } from '../../../data/australianLocationRanking';
 import {
   isValidAbn,
   normalizeAbnAcn,
@@ -301,7 +302,7 @@ function RespondentFieldset({ respondent, index, onRemove }: RespondentFieldsetP
           )}
         </div>
         <div>
-          <label htmlFor={`r-email-${respondent.uiKey}`} className="label">Email<RequiredMark /></label>
+          <label htmlFor={`r-email-${respondent.uiKey}`} className="label">Email (if known)</label>
           <input
             id={`r-email-${respondent.uiKey}`}
             type="email"
@@ -312,6 +313,7 @@ function RespondentFieldset({ respondent, index, onRemove }: RespondentFieldsetP
           {emailError && (
             <p className="error-text">{emailError}</p>
           )}
+          <p className="help">Leave this blank if you do not know their email address.</p>
         </div>
         <div>
           <label htmlFor={`r-phone-${respondent.uiKey}`} className="label">Phone (BH)</label>
@@ -332,7 +334,7 @@ function RespondentFieldset({ respondent, index, onRemove }: RespondentFieldsetP
           )}
         </div>
         <div>
-          <label htmlFor={`r-mobile-${respondent.uiKey}`} className="label">Mobile<RequiredMark /></label>
+          <label htmlFor={`r-mobile-${respondent.uiKey}`} className="label">Mobile (if known)</label>
           <input
             id={`r-mobile-${respondent.uiKey}`}
             className={inputClass(Boolean(mobileError))}
@@ -348,6 +350,7 @@ function RespondentFieldset({ respondent, index, onRemove }: RespondentFieldsetP
           {mobileError && (
             <p className="error-text">{mobileError}</p>
           )}
+          <p className="help">Leave this blank if you do not know their mobile number.</p>
         </div>
       </div>
     </fieldset>
@@ -422,15 +425,20 @@ function SuburbCombobox({
   const options: ComboboxOption[] = useMemo(() => {
     if (!respondent.state) return [];
 
-    return locations
-      .filter((location) => location.state === respondent.state)
+    return rankAustralianSuburbsForQuery(locations, respondent.state)
       .map((location) => ({
         label: formatLocationLabel(location),
         value: locationValue(location),
         searchText: `${location.suburb} ${location.postcode} ${location.state} ${location.stateCode}`,
-      }))
-      .sort((a, b) => a.label.localeCompare(b.label));
+      }));
   }, [locations, respondent.state]);
+
+  const filterSuburbOptions = useMemo(() => {
+    const optionByValue = new Map(options.map((option) => [option.value, option]));
+    return (_options: ComboboxOption[], query: string) => rankAustralianSuburbsForQuery(locations, respondent.state ?? '', query)
+      .map((location) => optionByValue.get(locationValue(location)))
+      .filter((option): option is ComboboxOption => Boolean(option));
+  }, [locations, options, respondent.state]);
 
   const selectedValue =
     respondent.suburb && respondent.state && respondent.postcode
@@ -459,6 +467,7 @@ function SuburbCombobox({
       disabled={!respondent.state || loading}
       noOptionsMessage={loading ? 'Loading...' : 'No suburbs'}
       hasError={hasError}
+      filterOptions={filterSuburbOptions}
     />
   );
 }

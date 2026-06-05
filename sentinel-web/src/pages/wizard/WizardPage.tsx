@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { FormProvider, useForm, useWatch, type Path, type Resolver } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -27,6 +27,7 @@ import {
   getAnonymousWizardStorage,
   readAnonymousWizardSession,
 } from './anonymousWizardSession';
+import { buildConfirmationComplaintSummary } from './confirmationActions';
 
 const STEP_FIELDS: Record<number, Array<Path<WizardForm>>> = {
   1: ['complainantContact', 'interpreterRequired', 'preferredLanguage', 'onBehalfOf', 'representative'],
@@ -61,6 +62,8 @@ export function WizardPage() {
 
   const [serverDraftId, setServerDraftId] = useState<string | null>(draftIdParam ?? null);
   const [grounds, setGrounds] = useState<GroundDto[]>([]);
+  const [groundsLoading, setGroundsLoading] = useState(true);
+  const [groundsError, setGroundsError] = useState<string | null>(null);
   const [loading, setLoading] = useState(Boolean(draftIdParam));
   const [serverErrors, setServerErrors] = useState<string[]>([]);
   const [validationSummary, setValidationSummary] = useState<ValidationSummary | null>(null);
@@ -70,9 +73,23 @@ export function WizardPage() {
   const anonymousRestoreEffectActive = useRef(false);
   const restoredAnonymousSession = useRef(false);
 
-  useEffect(() => {
-    complaintsApi.getGrounds().then(setGrounds).catch(() => setGrounds([]));
+  const loadGrounds = useCallback(async () => {
+    setGroundsLoading(true);
+    setGroundsError(null);
+    try {
+      const catalog = await complaintsApi.getGrounds();
+      setGrounds(catalog);
+    } catch {
+      setGrounds([]);
+      setGroundsError('Could not load the grounds of complaint. Please check your connection and try again.');
+    } finally {
+      setGroundsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void loadGrounds();
+  }, [loadGrounds]);
 
   useEffect(() => {
     const subscription = watch((_value, { name }) => {
@@ -230,6 +247,13 @@ export function WizardPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  function editStep(target: number) {
+    setValidationSummary(null);
+    setServerErrors([]);
+    setStep(Math.min(Math.max(target, 1), 5));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   async function saveAndExit() {
     await persistDraft(step);
     navigate('/dashboard');
@@ -258,8 +282,14 @@ export function WizardPage() {
       const result = isAuthenticated
         ? await complaintsApi.submit((await ensureDraftId())!, payload)
         : await complaintsApi.submitAnonymous(payload);
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
       navigate('/confirmation', {
-        state: { referenceCode: result.referenceCode, isAnonymous: !isAuthenticated },
+        state: {
+          referenceCode: result.referenceCode,
+          submittedAtUtc: result.submittedAtUtc,
+          isAnonymous: !isAuthenticated,
+          complaintSummary: buildConfirmationComplaintSummary(payload, grounds, result.submittedAtUtc),
+        },
         replace: true,
       });
     } catch (err) {
@@ -312,9 +342,16 @@ export function WizardPage() {
           <section className="card p-6" aria-label={`Step ${step}: ${heading}`} data-wizard-step>
             {step === 1 && <StepAboutYou isAuthenticated={isAuthenticated} />}
             {step === 2 && <StepRespondents />}
-            {step === 3 && <StepWhatHappened groundsCatalog={grounds} />}
+            {step === 3 && (
+              <StepWhatHappened
+                groundsCatalog={grounds}
+                groundsLoading={groundsLoading}
+                groundsLoadError={groundsError}
+                onRetryGrounds={loadGrounds}
+              />
+            )}
             {step === 4 && <StepSupporting draftId={serverDraftId} isAuthenticated={isAuthenticated} />}
-            {step === 5 && <StepReview groundsCatalog={grounds} />}
+            {step === 5 && <StepReview groundsCatalog={grounds} onEditStep={editStep} />}
           </section>
         </FieldValidationDisplayProvider>
       </FormProvider>

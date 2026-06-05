@@ -18,6 +18,7 @@ interface ComboboxProps {
   hasError?: boolean;
   ariaDescribedBy?: string;
   className?: string;
+  filterOptions?: (options: ComboboxOption[], query: string) => ComboboxOption[];
 }
 
 interface DropdownPosition {
@@ -50,6 +51,7 @@ export default function Combobox({
   hasError = false,
   ariaDescribedBy,
   className,
+  filterOptions,
 }: ComboboxProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -67,12 +69,13 @@ export default function Combobox({
 
   const filtered = useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase();
+    if (filterOptions) return filterOptions(options, q);
     if (!q) return options;
     return options.filter((option) => {
       const haystack = `${option.label} ${option.value} ${option.searchText ?? ''}`.toLowerCase();
       return haystack.includes(q);
     });
-  }, [debouncedQuery, options]);
+  }, [debouncedQuery, filterOptions, options]);
 
   useEffect(() => {
     function onDoc(e: MouseEvent | TouchEvent) {

@@ -343,8 +343,6 @@ function buildWizardSchema(options: { isAuthenticated: boolean; step?: number; v
           ['state', 'Please select the respondent state or territory'],
           ['suburb', 'Please select the respondent suburb'],
           ['postcode', 'Please enter the respondent postcode'],
-          ['contactEmail', 'Please enter the respondent email address'],
-          ['mobile', 'Please enter the respondent mobile number'],
         ];
 
         requiredFields.forEach(([field, message]) => {

@@ -5,11 +5,16 @@ import type { GroundDto } from '../../../types';
 import { InfoTooltip } from '../../../components/InfoTooltip';
 import ReactDatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { parse, isValid, isAfter, format } from 'date-fns';
+import { parse, isValid, isAfter } from 'date-fns';
 import { inputClass, invalidAria, RequiredMark, useFieldValidationDisplay } from '../fieldUi';
+import { toDateOnlyString } from '../../../utils/format';
+import { filterGroundGroups } from '../groundsFilter';
 
 interface Props extends StepProps {
   groundsCatalog: GroundDto[];
+  groundsLoading?: boolean;
+  groundsLoadError?: string | null;
+  onRetryGrounds?: () => void;
 }
 
 const RHF_UPDATE = { shouldDirty: true, shouldValidate: true };
@@ -20,7 +25,7 @@ function fieldErrorMessage(error: unknown): string | undefined {
   return typeof message === 'string' ? message : undefined;
 }
 
-export function StepWhatHappened({ groundsCatalog }: Props) {
+export function StepWhatHappened({ groundsCatalog, groundsLoading = false, groundsLoadError = null, onRetryGrounds }: Props) {
   const {
     control,
     register,
@@ -30,6 +35,7 @@ export function StepWhatHappened({ groundsCatalog }: Props) {
   const form = useWatch({ control }) as WizardForm;
   const showValidation = useFieldValidationDisplay();
   const [dateError, setDateError] = useState(false);
+  const [groundQuery, setGroundQuery] = useState('');
   const titleError = showValidation ? fieldErrorMessage(errors.title) : undefined;
   const groundsError = showValidation ? fieldErrorMessage(errors.grounds) : undefined;
   const descriptionError = showValidation ? fieldErrorMessage(errors.description) : undefined;
@@ -65,13 +71,7 @@ export function StepWhatHappened({ groundsCatalog }: Props) {
     );
   }
 
-  const groups = useMemo(
-    () => groundsCatalog.reduce<Record<string, GroundDto[]>>((acc, g) => {
-      (acc[g.group] ??= []).push(g);
-      return acc;
-    }, {}),
-    [groundsCatalog],
-  );
+  const groups = useMemo(() => filterGroundGroups(groundsCatalog, groundQuery), [groundsCatalog, groundQuery]);
 
   function applyDateFromDate(d: Date | null) {
     if (!d) {
@@ -79,7 +79,7 @@ export function StepWhatHappened({ groundsCatalog }: Props) {
       setValue('incidentDate', '', RHF_UPDATE);
       return;
     }
-    const iso = d.toISOString().slice(0, 10);
+    const iso = toDateOnlyString(d);
     const longDelay = iso !== '' && new Date(`${iso}T00:00:00`) < delayThreshold;
     setDateError(false);
     setValue('incidentDate', iso, RHF_UPDATE);
@@ -118,11 +118,47 @@ export function StepWhatHappened({ groundsCatalog }: Props) {
 
       <fieldset className={groundsError ? 'fieldset-error' : undefined} aria-invalid={invalidAria(Boolean(groundsError))}>
         <legend className="label">Grounds of complaint (select all that apply)<RequiredMark /></legend>
+        <p className="help">
+          Search or browse the groups below. Select every ground that seems relevant; you can choose more than one.
+        </p>
+        <div className="mt-3 max-w-md">
+          <label htmlFor="grounds-search" className="sr-only">Search grounds of complaint</label>
+          <input
+            id="grounds-search"
+            type="search"
+            className="input"
+            placeholder="Search grounds, for example disability or race"
+            value={groundQuery}
+            onChange={(event) => setGroundQuery(event.target.value)}
+          />
+        </div>
+        {groundsLoading && (
+          <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-600" role="status">
+            Loading grounds of complaint...
+          </p>
+        )}
+        {groundsLoadError && (
+          <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700" role="alert">
+            <p>{groundsLoadError}</p>
+            {onRetryGrounds && (
+              <button type="button" className="btn-secondary mt-3" onClick={onRetryGrounds}>
+                Retry
+              </button>
+            )}
+          </div>
+        )}
         <div className="space-y-4">
-          {Object.entries(groups).map(([group, items]) => (
-            <div key={group}>
-              <p className="text-sm font-semibold text-slate-500">{group}</p>
-              <div className="mt-2 space-y-2">
+          {!groundsLoading && !groundsLoadError && groups.length === 0 && (
+            <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
+              No grounds match your search. Try a broader term or clear the search.
+            </p>
+          )}
+          {groups.map(({ group, items }) => (
+            <details key={group} open className="rounded-lg border border-slate-200 bg-white p-3">
+              <summary className="cursor-pointer text-sm font-semibold text-navy-900">
+                {group} <span className="font-normal text-slate-500">({items.length})</span>
+              </summary>
+              <div className="mt-3 space-y-2">
                 {items.map((g) => {
                   const selectedIndex = form.grounds.findIndex((x) => x.groundType === g.value);
                   const detailError = selectedIndex >= 0 ? groundDetailError(selectedIndex) : undefined;
@@ -154,7 +190,7 @@ export function StepWhatHappened({ groundsCatalog }: Props) {
                   );
                 })}
               </div>
-            </div>
+            </details>
           ))}
         </div>
         {groundsError && <p className="error-text">{groundsError}</p>}
