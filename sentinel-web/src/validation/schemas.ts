@@ -71,6 +71,13 @@ export const loginSchema = z.object({
   password: requiredTextSchema('Password is required'),
 });
 
+const passwordFieldSchema = z
+  .string()
+  .min(10, 'Password must be at least 10 characters')
+  .max(100, maxLengthMessage('Password', 100))
+  .regex(/[A-Za-z]/, 'Password must include a letter')
+  .regex(/\d/, 'Password must include a number');
+
 export const registerSchema = z.object({
   fullName: z
     .string()
@@ -78,13 +85,23 @@ export const registerSchema = z.object({
     .min(2, 'Full name must be at least 2 characters')
     .max(150, maxLengthMessage('Full name', 150)),
   email: emailSchema,
-  password: z
-    .string()
-    .min(10, 'Password must be at least 10 characters')
-    .max(100, maxLengthMessage('Password', 100))
-    .regex(/[A-Za-z]/, 'Password must include a letter')
-    .regex(/\d/, 'Password must include a number'),
+  password: passwordFieldSchema,
 });
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: requiredTextSchema('Current password is required'),
+    newPassword: passwordFieldSchema,
+    confirmNewPassword: requiredTextSchema('Please confirm your new password'),
+  })
+  .refine((data) => data.newPassword === data.confirmNewPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmNewPassword'],
+  })
+  .refine((data) => data.newPassword !== data.currentPassword, {
+    message: 'New password must be different from your current password',
+    path: ['newPassword'],
+  });
 
 export const trackSchema = z.object({
   code: z

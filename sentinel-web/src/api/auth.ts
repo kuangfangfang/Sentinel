@@ -11,4 +11,10 @@ export const authApi = {
   logout: () => apiFetch<{ message: string }>('/auth/logout', { method: 'POST' }),
 
   me: () => apiFetch<UserDto>('/auth/me'),
+
+  changePassword: (currentPassword: string, newPassword: string) =>
+    apiFetch<{ message: string }>('/auth/change-password', {
+      method: 'POST',
+      body: { currentPassword, newPassword },
+    }),
 };

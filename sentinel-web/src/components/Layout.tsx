@@ -1,16 +1,74 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useDoubleEscapeQuickExit } from '../hooks/useQuickExit';
 import { DemoDisclaimerGate } from './DemoDisclaimerGate';
 import { GoogleTranslate } from './GoogleTranslate';
 import { QuickExitButton } from './QuickExitButton';
+import type { UserDto } from '../types';
 
 function navClass({ isActive }: { isActive: boolean }) {
   return [
     'rounded-md px-3 py-2 text-sm font-medium transition-colors',
     isActive ? 'bg-navy-800 text-white' : 'text-navy-100 hover:bg-navy-800/60 hover:text-white',
   ].join(' ');
+}
+
+function UserMenu({ user, onSignOut }: { user: UserDto; onSignOut: () => void }) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open]);
+
+  return (
+    <div ref={menuRef} className="relative">
+      <button
+        type="button"
+        className="flex items-center gap-1 rounded-md px-2 py-1.5 text-sm text-navy-100 hover:bg-navy-800/60 hover:text-white"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <span>{user.fullName}</span>
+        <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.94a.75.75 0 111.08 1.04l-4.24 4.5a.75.75 0 01-1.08 0l-4.24-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+        </svg>
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 z-50 mt-1 min-w-[10rem] rounded-md border border-slate-200 bg-white py-1 text-sm text-slate-700 shadow-lg"
+        >
+          <Link
+            to="/account"
+            role="menuitem"
+            className="block px-4 py-2 hover:bg-slate-50"
+            onClick={() => setOpen(false)}
+          >
+            Account
+          </Link>
+          <button
+            type="button"
+            role="menuitem"
+            className="block w-full px-4 py-2 text-left hover:bg-slate-50"
+            onClick={() => {
+              setOpen(false);
+              onSignOut();
+            }}
+          >
+            Sign out
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function Layout() {
@@ -69,10 +127,7 @@ export function Layout() {
             <QuickExitButton />
             <div className="hidden items-center gap-2 lg:flex">
               {user ? (
-                <>
-                  <span className="text-sm text-navy-100">{user.fullName}</span>
-                  <button type="button" onClick={handleLogout} className="btn-secondary">Sign out</button>
-                </>
+                <UserMenu user={user} onSignOut={handleLogout} />
               ) : (
                 <>
                   <Link to="/login" className="btn-ghost text-navy-100 hover:bg-navy-800/60">Sign in</Link>
@@ -103,7 +158,12 @@ export function Layout() {
                 <GoogleTranslate />
               </div>
               {user ? (
-                <button type="button" onClick={handleLogout} className="btn-secondary">Sign out ({user.fullName})</button>
+                <>
+                  <Link to="/account" className="btn-secondary" onClick={() => setMenuOpen(false)}>Account</Link>
+                  <button type="button" onClick={handleLogout} className="btn-secondary">
+                    Sign out ({user.fullName})
+                  </button>
+                </>
               ) : (
                 <>
                   <Link to="/login" className="btn-secondary" onClick={() => setMenuOpen(false)}>Sign in</Link>

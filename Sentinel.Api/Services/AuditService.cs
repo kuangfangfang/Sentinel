@@ -11,6 +11,7 @@ public static class AuditEvents
     public const string LoginFailed = "LoginFailed";
     public const string AccountLockedOut = "AccountLockedOut";
     public const string Logout = "Logout";
+    public const string PasswordChanged = "PasswordChanged";
     public const string ComplaintSubmitted = "ComplaintSubmitted";
     public const string ComplaintAccessDenied = "ComplaintAccessDenied";
     public const string StatusChanged = "StatusChanged";
