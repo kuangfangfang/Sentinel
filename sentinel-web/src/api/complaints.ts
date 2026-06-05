@@ -12,8 +12,20 @@ import type {
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5187/api';
 
+// Grounds are static reference data; memoise the request so repeated pages
+// (wizard, triage queue, complaint detail) don't refetch the same list.
+let groundsCache: Promise<GroundDto[]> | null = null;
+
 export const complaintsApi = {
-  getGrounds: () => apiFetch<GroundDto[]>('/complaints/grounds'),
+  getGrounds: () => {
+    if (!groundsCache) {
+      groundsCache = apiFetch<GroundDto[]>('/complaints/grounds').catch((err) => {
+        groundsCache = null;
+        throw err;
+      });
+    }
+    return groundsCache;
+  },
 
   createDraft: () => apiFetch<CreateDraftResponse>('/complaints/draft', { method: 'POST' }),
 

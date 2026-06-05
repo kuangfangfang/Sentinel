@@ -16,6 +16,7 @@ public static class AuditEvents
     public const string StatusChanged = "StatusChanged";
     public const string CaseNoteAdded = "CaseNoteAdded";
     public const string SeverityChanged = "SeverityChanged";
+    public const string ComplaintAssigned = "ComplaintAssigned";
     public const string AttachmentUploaded = "AttachmentUploaded";
     public const string AttachmentDownloaded = "AttachmentDownloaded";
 }

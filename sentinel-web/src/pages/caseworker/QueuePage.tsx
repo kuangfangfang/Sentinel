@@ -10,15 +10,22 @@ import { Spinner } from '../../components/Spinner';
 import { SeverityBadge, StatusBadge } from '../../components/StatusBadge';
 import { formatDate } from '../../utils/format';
 import { queueFilterSchema } from '../../validation/schemas';
+import { useAuth } from '../../context/AuthContext';
 
 const STATUSES: ComplaintStatus[] = ['Submitted', 'UnderReview', 'MoreInfoNeeded', 'Resolved', 'Closed', 'Withdrawn'];
 const SEVERITIES: Severity[] = ['Low', 'Medium', 'High', 'Critical'];
+const SORT_OPTIONS: { value: string; label: string }[] = [
+  { value: 'submitted', label: 'Lodged date' },
+  { value: 'severity', label: 'Severity' },
+  { value: 'status', label: 'Status' },
+];
 const DEFAULT_QUERY: QueueQuery = { page: 1, pageSize: 10, sortBy: 'submitted', sortDescending: true };
-const DEFAULT_FILTERS = { search: '', status: '', severity: '', ground: '' };
+const DEFAULT_FILTERS = { search: '', status: '', severity: '', ground: '', fromDate: '', toDate: '' };
 
 type QueueFilterData = z.infer<typeof queueFilterSchema>;
 
 export function QueuePage() {
+  const { user } = useAuth();
   const [query, setQuery] = useState<QueueQuery>(DEFAULT_QUERY);
   const [result, setResult] = useState<PagedResult<QueueItemDto> | null>(null);
   const [grounds, setGrounds] = useState<GroundDto[]>([]);
@@ -57,6 +64,8 @@ export function QueuePage() {
       status: (data.status || undefined) as ComplaintStatus | undefined,
       severity: (data.severity || undefined) as Severity | undefined,
       ground: data.ground || undefined,
+      fromDate: data.fromDate || undefined,
+      toDate: data.toDate || undefined,
     });
   }
 
@@ -64,6 +73,24 @@ export function QueuePage() {
     reset(DEFAULT_FILTERS);
     setQuery(DEFAULT_QUERY);
   }
+
+  function changeSort(sortBy: string) {
+    setQuery((q) => ({ ...q, page: 1, sortBy }));
+  }
+
+  function toggleDirection() {
+    setQuery((q) => ({ ...q, page: 1, sortDescending: !q.sortDescending }));
+  }
+
+  function changeAssignment(value: 'all' | 'me' | 'unassigned') {
+    patch({
+      assigneeUserId: value === 'me' ? user?.id : undefined,
+      unassigned: value === 'unassigned' ? true : undefined,
+    });
+  }
+
+  const assignmentValue: 'all' | 'me' | 'unassigned' =
+    query.unassigned ? 'unassigned' : query.assigneeUserId ? 'me' : 'all';
 
   const items = result?.items ?? [];
 
@@ -119,6 +146,24 @@ export function QueuePage() {
               {grounds.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
             </select>
           </div>
+          <div>
+            <label htmlFor="fromDate" className="label">Lodged from</label>
+            <input
+              id="fromDate"
+              type="date"
+              className="input"
+              {...register('fromDate', { onChange: (e) => patch({ fromDate: e.target.value || undefined }) })}
+            />
+          </div>
+          <div>
+            <label htmlFor="toDate" className="label">Lodged to</label>
+            <input
+              id="toDate"
+              type="date"
+              className="input"
+              {...register('toDate', { onChange: (e) => patch({ toDate: e.target.value || undefined }) })}
+            />
+          </div>
           <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-5">
             <button type="submit" className="btn-primary">Search</button>
             <button type="button" className="btn-ghost" onClick={clearFilters}>
@@ -126,6 +171,36 @@ export function QueuePage() {
             </button>
           </div>
         </form>
+      </div>
+
+      <div className="flex flex-wrap items-end gap-3">
+        <div>
+          <label htmlFor="sortBy" className="label">Sort by</label>
+          <select
+            id="sortBy"
+            className="input"
+            value={query.sortBy ?? 'submitted'}
+            onChange={(e) => changeSort(e.target.value)}
+          >
+            {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
+        <button type="button" className="btn-secondary" onClick={toggleDirection}>
+          {query.sortDescending ? 'Descending' : 'Ascending'}
+        </button>
+        <div>
+          <label htmlFor="assignment" className="label">Assignment</label>
+          <select
+            id="assignment"
+            className="input"
+            value={assignmentValue}
+            onChange={(e) => changeAssignment(e.target.value as 'all' | 'me' | 'unassigned')}
+          >
+            <option value="all">All</option>
+            <option value="me">Assigned to me</option>
+            <option value="unassigned">Unassigned</option>
+          </select>
+        </div>
       </div>
 
       {error && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{error}</div>}
@@ -143,7 +218,7 @@ export function QueuePage() {
                 <table className="min-w-full divide-y divide-slate-200">
                   <thead className="bg-slate-50">
                     <tr>
-                      {['Reference', 'Title', 'Status', 'Severity', 'Location (exact)', 'Lodged', ''].map((h) => (
+                      {['Reference', 'Title', 'Status', 'Severity', 'Location (exact)', 'Lodged', 'Assignee', ''].map((h) => (
                         <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{h}</th>
                       ))}
                     </tr>
@@ -157,6 +232,9 @@ export function QueuePage() {
                         <td className="px-4 py-3"><SeverityBadge severity={c.severity} /></td>
                         <td className="px-4 py-3 text-sm text-slate-600">{c.incidentLocation}</td>
                         <td className="px-4 py-3 text-sm text-slate-600">{formatDate(c.submittedAt)}</td>
+                        <td className="px-4 py-3 text-sm text-slate-600">
+                          {c.assignedToName ?? <span className="text-slate-400">Unassigned</span>}
+                        </td>
                         <td className="px-4 py-3 text-right">
                           <Link to={`/caseworker/complaints/${c.id}`} className="font-medium text-accent-700 hover:underline">Open</Link>
                         </td>
@@ -180,6 +258,7 @@ export function QueuePage() {
                       <span>Severity: <SeverityBadge severity={c.severity} /></span>
                       <span>{c.incidentLocation}</span>
                       <span>Lodged {formatDate(c.submittedAt)}</span>
+                      <span>Assignee: {c.assignedToName ?? 'Unassigned'}</span>
                     </div>
                   </li>
                 ))}

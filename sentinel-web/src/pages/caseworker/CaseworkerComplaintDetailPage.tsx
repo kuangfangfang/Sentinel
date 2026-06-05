@@ -6,7 +6,8 @@ import { Link, useParams } from 'react-router-dom';
 import { caseworkerApi } from '../../api/caseworker';
 import { complaintsApi } from '../../api/complaints';
 import { ApiError } from '../../api/client';
-import type { CaseworkerComplaintDetailDto, ComplaintStatus, GroundDto, Severity } from '../../types';
+import type { CaseworkerComplaintDetailDto, CaseworkerOptionDto, ComplaintStatus, GroundDto, Severity } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 import { Spinner } from '../../components/Spinner';
 import { SeverityBadge, StatusBadge } from '../../components/StatusBadge';
 import { StatusTimeline } from '../../components/StatusTimeline';
@@ -20,9 +21,13 @@ type StatusChangeFormData = z.infer<typeof statusChangeSchema>;
 
 export function CaseworkerComplaintDetailPage() {
   const { id } = useParams();
+  const { user } = useAuth();
   const [data, setData] = useState<CaseworkerComplaintDetailDto | null>(null);
   const [grounds, setGrounds] = useState<GroundDto[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [caseworkers, setCaseworkers] = useState<CaseworkerOptionDto[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const [busy, setBusy] = useState(false);
   const noteForm = useForm<CaseNoteFormData>({
@@ -40,11 +45,17 @@ export function CaseworkerComplaintDetailPage() {
 
   useEffect(() => {
     if (!id) return;
-    caseworkerApi.detail(id).then(setData).catch(() => setError('Could not load this complaint.'));
+    caseworkerApi.detail(id).then(setData).catch(() => setLoadError('Could not load this complaint.'));
     complaintsApi.getGrounds().then(setGrounds).catch(() => undefined);
+    caseworkerApi.listCaseworkers().then(setCaseworkers).catch(() => undefined);
   }, [id]);
 
-  if (error) return <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{error}</div>;
+  function resetFeedback() {
+    setActionError(null);
+    setSuccess(null);
+  }
+
+  if (loadError) return <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{loadError}</div>;
   if (!data) return <Spinner />;
 
   const c = data.complaint;
@@ -55,7 +66,7 @@ export function CaseworkerComplaintDetailPage() {
   async function changeStatus(data: StatusChangeFormData) {
     if (!id) return;
     setBusy(true);
-    setError(null);
+    resetFeedback();
     try {
       const updated = await caseworkerApi.changeStatus(
         id,
@@ -64,8 +75,9 @@ export function CaseworkerComplaintDetailPage() {
       );
       setData(updated);
       statusForm.reset({ statusTarget: '', statusNote: '' });
+      setSuccess(`Status changed to ${updated.complaint.status}.`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not change the status.');
+      setActionError(err instanceof ApiError ? err.message : 'Could not change the status.');
     } finally {
       setBusy(false);
     }
@@ -74,10 +86,12 @@ export function CaseworkerComplaintDetailPage() {
   async function setSeverity(severity: Severity) {
     if (!id) return;
     setBusy(true);
+    resetFeedback();
     try {
       setData(await caseworkerApi.setSeverity(id, severity));
+      setSuccess(`Severity set to ${severity}.`);
     } catch {
-      setError('Could not set severity.');
+      setActionError('Could not set severity.');
     } finally {
       setBusy(false);
     }
@@ -86,12 +100,47 @@ export function CaseworkerComplaintDetailPage() {
   async function addNote(data: CaseNoteFormData) {
     if (!id) return;
     setBusy(true);
+    resetFeedback();
     try {
       const note = await caseworkerApi.addNote(id, data.body.trim());
       setData((prev) => (prev ? { ...prev, caseNotes: [note, ...prev.caseNotes] } : prev));
       noteForm.reset({ body: '' });
+      setSuccess('Case note added.');
     } catch {
-      setError('Could not add the note.');
+      setActionError('Could not add the note.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function download(attachmentId: string, name: string) {
+    if (!id) return;
+    resetFeedback();
+    try {
+      const blob = await complaintsApi.downloadAttachment(id, attachmentId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setActionError('Could not download that file.');
+    }
+  }
+
+  async function assign(assigneeUserId: string | null) {
+    if (!id) return;
+    setBusy(true);
+    resetFeedback();
+    try {
+      const updated = await caseworkerApi.assign(id, assigneeUserId);
+      setData(updated);
+      setSuccess(updated.complaint.assignedToName
+        ? `Assigned to ${updated.complaint.assignedToName}.`
+        : 'Complaint unassigned.');
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : 'Could not update the assignment.');
     } finally {
       setBusy(false);
     }
@@ -114,6 +163,19 @@ export function CaseworkerComplaintDetailPage() {
           <SeverityBadge severity={c.severity} />
         </div>
       </div>
+
+      {success && (
+        <div className="flex items-start justify-between gap-3 rounded-lg bg-green-50 p-3 text-sm text-green-800" role="status">
+          <span>{success}</span>
+          <button type="button" className="font-medium hover:underline" onClick={() => setSuccess(null)}>Dismiss</button>
+        </div>
+      )}
+      {actionError && (
+        <div className="flex items-start justify-between gap-3 rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">
+          <span>{actionError}</span>
+          <button type="button" className="font-medium hover:underline" onClick={() => setActionError(null)}>Dismiss</button>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
@@ -222,6 +284,28 @@ export function CaseworkerComplaintDetailPage() {
           </section>
 
           <section className="card p-5">
+            <h2 className="mb-3 font-semibold text-navy-900">Evidence files</h2>
+            {c.attachments.length === 0 ? (
+              <p className="text-sm text-slate-400">No evidence files were attached.</p>
+            ) : (
+              <ul className="divide-y divide-slate-100">
+                {c.attachments.map((a) => (
+                  <li key={a.id} className="flex items-center justify-between gap-2 py-2 text-sm">
+                    <span className="truncate">{a.originalFileName}</span>
+                    <button
+                      type="button"
+                      className="font-medium text-accent-700 hover:underline"
+                      onClick={() => download(a.id, a.originalFileName)}
+                    >
+                      Download
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="card p-5">
             <h2 className="font-semibold text-navy-900">Internal case notes</h2>
             <p className="text-xs text-slate-400">Visible to caseworkers only. Never shown to the complainant.</p>
             <form onSubmit={noteForm.handleSubmit(addNote)} className="mt-3 space-y-2">
@@ -250,6 +334,40 @@ export function CaseworkerComplaintDetailPage() {
         </div>
 
         <div className="space-y-6">
+          <section className="card p-5">
+            <h2 className="mb-3 font-semibold text-navy-900">Assigned caseworker</h2>
+            <p className="text-sm text-slate-600">
+              {c.assignedToName ? c.assignedToName : <span className="text-slate-400">Unassigned</span>}
+            </p>
+            <div className="mt-3 space-y-3">
+              <div>
+                <label htmlFor="assignee" className="label">Reassign to</label>
+                <select
+                  id="assignee"
+                  className="input"
+                  value={c.assignedToUserId ?? ''}
+                  disabled={busy}
+                  onChange={(e) => assign(e.target.value || null)}
+                >
+                  <option value="">Unassigned</option>
+                  {caseworkers.map((cw) => <option key={cw.id} value={cw.id}>{cw.name}</option>)}
+                </select>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {user && c.assignedToUserId !== user.id && (
+                  <button type="button" className="btn-secondary" disabled={busy} onClick={() => assign(user.id)}>
+                    Claim to me
+                  </button>
+                )}
+                {c.assignedToUserId && (
+                  <button type="button" className="btn-ghost" disabled={busy} onClick={() => assign(null)}>
+                    Unassign
+                  </button>
+                )}
+              </div>
+            </div>
+          </section>
+
           <section className="card p-5">
             <h2 className="mb-3 font-semibold text-navy-900">Change status</h2>
             {nextOptions.length === 0 ? (

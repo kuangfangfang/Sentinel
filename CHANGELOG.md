@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## 2026-06-05 — Caseworker workspace
+
+### Features
+
+- Added complaint assignment: caseworkers can claim, reassign, or unassign a complaint, with a new `AssignedToUserId`/`AssignedToName` on the complaint, a `ComplaintAssigned` audit event, and `POST /caseworker/complaints/{id}/assign` plus `GET /caseworker/caseworkers` endpoints.
+- Added an "Assigned caseworker" card to the caseworker complaint detail page (claim to me, reassign dropdown, unassign).
+- Added an "Assignee" column and an "Assigned to me / Unassigned" filter to the triage queue.
+- Added sort-by (lodged date / severity / status) and direction controls plus a "Lodged from / to" date range to the triage queue, exposing existing backend query support.
+- Added an "Evidence files" section to the caseworker complaint detail page so caseworkers can download attachments.
+
+### Improvements
+
+- Caseworker complaint detail action errors (status, severity, note, assignment) now show inline and dismissibly instead of replacing the whole page; only load failures gate the view.
+- Added dismissible success banners for caseworker status, severity, note, and assignment actions.
+- Memoised the static grounds reference list in the frontend API client so the wizard, queue, and detail pages no longer refetch it.
+
+### Verification
+
+- Passed `dotnet test` (41 tests, including new caseworker assignment and queue-filter coverage).
+- Passed `npm run build`.
+- Passed `npm run test:validation`.
+
 ## 2026-06-05
 
 ### Features

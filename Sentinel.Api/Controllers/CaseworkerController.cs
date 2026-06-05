@@ -62,4 +62,14 @@ public class CaseworkerController : ControllerBase
             throw new AppValidationException(ModelState.ToErrorDictionary());
         return Ok(await _service.SetSeverityAsync(id, request, ct));
     }
+
+    /// <summary>Caseworkers available to be assigned a complaint (FR-31).</summary>
+    [HttpGet("caseworkers")]
+    public async Task<ActionResult<List<CaseworkerOptionDto>>> Caseworkers(CancellationToken ct) =>
+        Ok(await _service.ListCaseworkersAsync(ct));
+
+    /// <summary>Assign, reassign, claim, or unassign a complaint (FR-31).</summary>
+    [HttpPost("complaints/{id:guid}/assign")]
+    public async Task<ActionResult<CaseworkerComplaintDetailDto>> Assign(Guid id, AssignRequest request, CancellationToken ct) =>
+        Ok(await _service.AssignAsync(id, request, ct));
 }

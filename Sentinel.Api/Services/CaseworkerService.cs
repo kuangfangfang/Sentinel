@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Sentinel.Api.Dtos;
 using Sentinel.Api.Middleware;
@@ -18,13 +19,20 @@ public class CaseworkerService
     private readonly ICurrentUser _current;
     private readonly IStatusTransitionService _transitions;
     private readonly IAuditService _audit;
+    private readonly UserManager<ApplicationUser> _users;
 
-    public CaseworkerService(SentinelDbContext db, ICurrentUser current, IStatusTransitionService transitions, IAuditService audit)
+    public CaseworkerService(
+        SentinelDbContext db,
+        ICurrentUser current,
+        IStatusTransitionService transitions,
+        IAuditService audit,
+        UserManager<ApplicationUser> users)
     {
         _db = db;
         _current = current;
         _transitions = transitions;
         _audit = audit;
+        _users = users;
     }
 
     public async Task<PagedResult<QueueItemDto>> GetQueueAsync(QueueQuery q, CancellationToken ct)
@@ -35,6 +43,8 @@ public class CaseworkerService
         if (q.Status is { } status) query = query.Where(c => c.Status == status);
         if (q.Severity is { } severity) query = query.Where(c => c.Severity == severity);
         if (q.Ground is { } ground) query = query.Where(c => c.Grounds.Any(g => g.GroundType == ground));
+        if (q.Unassigned == true) query = query.Where(c => c.AssignedToUserId == null);
+        else if (q.AssigneeUserId is { } assignee) query = query.Where(c => c.AssignedToUserId == assignee);
 
         if (q.FromDate is { } from)
         {
@@ -71,7 +81,8 @@ public class CaseworkerService
             .Take(pageSize)
             .Select(c => new QueueItemDto(
                 c.Id, c.ReferenceCode, c.Title, c.Status, c.Severity,
-                c.IncidentLocation, c.IncidentDate, c.SubmittedAt, c.Respondents.Count, c.IsAnonymous))
+                c.IncidentLocation, c.IncidentDate, c.SubmittedAt, c.Respondents.Count, c.IsAnonymous,
+                c.AssignedToUserId, c.AssignedToName))
             .ToListAsync(ct);
 
         return new PagedResult<QueueItemDto>(items, page, pageSize, total);
@@ -142,6 +153,44 @@ public class CaseworkerService
         await _db.SaveChangesAsync(ct);
         await _audit.LogAsync(AuditEvents.SeverityChanged, _current.UserId, req.Severity.ToString(), "Complaint", id.ToString(), ct);
         return ToCaseworkerDetail(complaint);
+    }
+
+    public async Task<CaseworkerComplaintDetailDto> AssignAsync(Guid id, AssignRequest req, CancellationToken ct)
+    {
+        var complaint = await LoadFull().FirstOrDefaultAsync(c => c.Id == id && c.Status != ComplaintStatus.Draft, ct);
+        if (complaint is null) throw new NotFoundException("Complaint not found.");
+
+        string detail;
+        if (req.AssigneeUserId is { } assigneeId)
+        {
+            var assignee = await _users.FindByIdAsync(assigneeId.ToString());
+            if (assignee is null || !await _users.IsInRoleAsync(assignee, Core.Roles.Caseworker))
+                throw new ConflictException("That user is not a caseworker.");
+
+            complaint.AssignedToUserId = assignee.Id;
+            complaint.AssignedToName = string.IsNullOrWhiteSpace(assignee.FullName) ? assignee.Email : assignee.FullName;
+            detail = $"Assigned to {complaint.AssignedToName}";
+        }
+        else
+        {
+            complaint.AssignedToUserId = null;
+            complaint.AssignedToName = null;
+            detail = "Unassigned";
+        }
+
+        complaint.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        await _audit.LogAsync(AuditEvents.ComplaintAssigned, _current.UserId, detail, "Complaint", id.ToString(), ct);
+        return ToCaseworkerDetail(complaint);
+    }
+
+    public async Task<List<CaseworkerOptionDto>> ListCaseworkersAsync(CancellationToken ct)
+    {
+        var caseworkers = await _users.GetUsersInRoleAsync(Core.Roles.Caseworker);
+        return caseworkers
+            .Select(u => new CaseworkerOptionDto(u.Id, string.IsNullOrWhiteSpace(u.FullName) ? (u.Email ?? "Caseworker") : u.FullName, u.Email))
+            .OrderBy(u => u.Name)
+            .ToList();
     }
 
     public async Task<DashboardSummaryDto> GetDashboardAsync(CancellationToken ct)

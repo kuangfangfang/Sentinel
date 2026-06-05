@@ -40,6 +40,13 @@ public class Complaint
     public ComplaintStatus Status { get; set; } = ComplaintStatus.Draft;
     public Severity? Severity { get; set; }
 
+    /// <summary>The caseworker currently responsible for this complaint. Null when unassigned (FR-31).</summary>
+    public Guid? AssignedToUserId { get; set; }
+
+    /// <summary>Denormalised display name of the assigned caseworker, matching the
+    /// CaseNote.AuthorName / StatusHistory.ChangedByName pattern for cheap display.</summary>
+    public string? AssignedToName { get; set; }
+
     public bool InterpreterRequired { get; set; }
     public string? PreferredLanguage { get; set; }
 

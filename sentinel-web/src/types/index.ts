@@ -178,6 +178,8 @@ export interface ComplaintDetailDto {
   delayReason?: string | null;
   status: ComplaintStatus;
   severity?: Severity | null;
+  assignedToUserId?: string | null;
+  assignedToName?: string | null;
   interpreterRequired: boolean;
   preferredLanguage?: string | null;
   genAiUsed?: boolean | null;
@@ -240,6 +242,14 @@ export interface QueueItemDto {
   submittedAt?: string | null;
   respondentCount: number;
   isAnonymous: boolean;
+  assignedToUserId?: string | null;
+  assignedToName?: string | null;
+}
+
+export interface CaseworkerOptionDto {
+  id: string;
+  name: string;
+  email?: string | null;
 }
 
 export interface CaseNoteDto {
@@ -288,4 +298,6 @@ export interface QueueQuery {
   sortDescending?: boolean;
   page?: number;
   pageSize?: number;
+  assigneeUserId?: string;
+  unassigned?: boolean;
 }

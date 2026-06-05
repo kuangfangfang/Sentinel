@@ -17,11 +17,26 @@ public class QueueQuery
     public bool SortDescending { get; set; } = true;
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 20;
+
+    /// <summary>Filter by the assigned caseworker. Used by "assigned to me" (FR-31).</summary>
+    public Guid? AssigneeUserId { get; set; }
+    /// <summary>When true, show only complaints with no assigned caseworker.</summary>
+    public bool? Unassigned { get; set; }
 }
 
 public record QueueItemDto(
     Guid Id, string? ReferenceCode, string Title, ComplaintStatus Status, Severity? Severity,
-    string IncidentLocation, DateOnly? IncidentDate, DateTime? SubmittedAt, int RespondentCount, bool IsAnonymous);
+    string IncidentLocation, DateOnly? IncidentDate, DateTime? SubmittedAt, int RespondentCount, bool IsAnonymous,
+    Guid? AssignedToUserId, string? AssignedToName);
+
+/// <summary>A caseworker who can be assigned a complaint (FR-31).</summary>
+public record CaseworkerOptionDto(Guid Id, string Name, string? Email);
+
+/// <summary>Assign, reassign, claim, or unassign a complaint. Null assignee clears the assignment.</summary>
+public record AssignRequest
+{
+    public Guid? AssigneeUserId { get; init; }
+}
 
 public record CaseNoteDto(Guid Id, string AuthorName, string Body, DateTime CreatedAt);
 

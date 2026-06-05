@@ -143,6 +143,11 @@ Important coverage includes:
 ## Current State
 
 The current working branch includes:
+- caseworker complaint assignment (claim / reassign / unassign) with an audited `ComplaintAssigned` event
+- caseworker detail page evidence-file download and inline (non-fatal) action error handling
+- caseworker success feedback banners for status, severity, note, and assignment actions
+- triage queue sorting controls, lodged-date range filter, and an assignee column with an "assigned to me / unassigned" filter
+- memoised grounds reference list in the frontend API client
 - complaint wizard UX improvements
 - local CORS support for both `localhost` and `127.0.0.1`
 - grounds loading retry and error handling
@@ -161,6 +166,12 @@ The current working branch includes:
 
 ## Most Relevant Files
 
+- `sentinel-web/src/pages/caseworker/QueuePage.tsx`
+- `sentinel-web/src/pages/caseworker/CaseworkerComplaintDetailPage.tsx`
+- `sentinel-web/src/api/caseworker.ts`
+- `Sentinel.Api/Services/CaseworkerService.cs`
+- `Sentinel.Api/Controllers/CaseworkerController.cs`
+- `Sentinel.Api/Dtos/CaseworkerDtos.cs`
 - `sentinel-web/src/pages/wizard/WizardPage.tsx`
 - `sentinel-web/src/pages/wizard/ConfirmationPage.tsx`
 - `sentinel-web/src/pages/wizard/confirmationActions.ts`

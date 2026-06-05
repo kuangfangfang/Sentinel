@@ -99,6 +99,8 @@ export const queueFilterSchema = z.object({
   status: z.string(),
   severity: z.string(),
   ground: z.string(),
+  fromDate: z.string(),
+  toDate: z.string(),
 });
 
 export const caseNoteSchema = z.object({

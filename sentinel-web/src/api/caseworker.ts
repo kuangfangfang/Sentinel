@@ -3,6 +3,7 @@ import type {
   AnalyticsDto,
   CaseNoteDto,
   CaseworkerComplaintDetailDto,
+  CaseworkerOptionDto,
   DashboardSummaryDto,
   PagedResult,
   QueueItemDto,
@@ -43,5 +44,13 @@ export const caseworkerApi = {
     apiFetch<CaseworkerComplaintDetailDto>(`/caseworker/complaints/${id}/severity`, {
       method: 'POST',
       body: { severity },
+    }),
+
+  listCaseworkers: () => apiFetch<CaseworkerOptionDto[]>('/caseworker/caseworkers'),
+
+  assign: (id: string, assigneeUserId: string | null) =>
+    apiFetch<CaseworkerComplaintDetailDto>(`/caseworker/complaints/${id}/assign`, {
+      method: 'POST',
+      body: { assigneeUserId },
     }),
 };

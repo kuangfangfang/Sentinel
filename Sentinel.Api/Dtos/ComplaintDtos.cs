@@ -157,6 +157,8 @@ public record ComplaintDetailDto
     public string? DelayReason { get; init; }
     public ComplaintStatus Status { get; init; }
     public Severity? Severity { get; init; }
+    public Guid? AssignedToUserId { get; init; }
+    public string? AssignedToName { get; init; }
     public bool InterpreterRequired { get; init; }
     public string? PreferredLanguage { get; init; }
     public bool? GenAiUsed { get; init; }

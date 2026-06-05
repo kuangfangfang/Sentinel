@@ -90,6 +90,8 @@ public static class ComplaintMapping
         DelayReason = c.DelayReason,
         Status = c.Status,
         Severity = c.Severity,
+        AssignedToUserId = c.AssignedToUserId,
+        AssignedToName = c.AssignedToName,
         InterpreterRequired = c.InterpreterRequired,
         PreferredLanguage = c.PreferredLanguage,
         GenAiUsed = c.GenAiUsed,
