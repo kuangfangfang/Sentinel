@@ -124,6 +124,38 @@ public class AuthController : ControllerBase
         return Ok(ToDto(user, roles));
     }
 
+    /// <summary>Change the signed-in user's password (FR-12). Requires the current password.</summary>
+    [HttpPost("change-password")]
+    [Authorize]
+    public async Task<IActionResult> ChangePassword(ChangePasswordRequest request)
+    {
+        if (!ModelState.IsValid)
+            throw new AppValidationException(ModelState.ToErrorDictionary());
+
+        var user = await _userManager.GetUserAsync(User);
+        if (user is null) throw new NotFoundException("User not found.");
+
+        var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+        if (!result.Succeeded)
+        {
+            if (result.Errors.Any(e => e.Code == "PasswordMismatch"))
+            {
+                throw new AppValidationException(new Dictionary<string, string[]>
+                {
+                    ["currentPassword"] = new[] { "Current password is incorrect." }
+                });
+            }
+
+            throw new AppValidationException(new Dictionary<string, string[]>
+            {
+                ["newPassword"] = result.Errors.Select(e => e.Description).ToArray()
+            });
+        }
+
+        await _audit.LogAsync(AuditEvents.PasswordChanged, user.Id);
+        return Ok(new { message = "Password updated." });
+    }
+
     private static UserDto ToDto(ApplicationUser user, IList<string> roles) =>
         new(user.Id, user.Email ?? string.Empty, user.FullName, roles.ToList());
 }

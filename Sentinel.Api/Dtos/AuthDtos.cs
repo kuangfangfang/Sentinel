@@ -21,6 +21,14 @@ public record LoginRequest
     [Required] public string Password { get; init; } = string.Empty;
 }
 
+public record ChangePasswordRequest
+{
+    [Required] public string CurrentPassword { get; init; } = string.Empty;
+
+    [Required, StringLength(100, MinimumLength = 10)]
+    public string NewPassword { get; init; } = string.Empty;
+}
+
 public record AuthResponse(string Token, DateTime ExpiresAtUtc, UserDto User);
 
 public record UserDto(Guid Id, string Email, string FullName, IReadOnlyList<string> Roles);

@@ -16,6 +16,7 @@ import { ComplaintDetailPage } from './pages/complainant/ComplaintDetailPage';
 import { CaseworkerDashboardPage } from './pages/caseworker/CaseworkerDashboardPage';
 import { QueuePage } from './pages/caseworker/QueuePage';
 import { CaseworkerComplaintDetailPage } from './pages/caseworker/CaseworkerComplaintDetailPage';
+import { AccountPage } from './pages/AccountPage';
 
 export default function App() {
   return (
@@ -82,6 +83,15 @@ export default function App() {
           element={
             <ProtectedRoute role="Caseworker">
               <CaseworkerComplaintDetailPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/account"
+          element={
+            <ProtectedRoute>
+              <AccountPage />
             </ProtectedRoute>
           }
         />
