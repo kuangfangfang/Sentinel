@@ -35,6 +35,8 @@ export function CaseworkerComplaintDetailPage() {
   const [success, setSuccess] = useState<string | null>(null);
 
   const [busy, setBusy] = useState(false);
+  const [draftAssigneeId, setDraftAssigneeId] = useState<string | null | undefined>(undefined);
+  const [draftSeverity, setDraftSeverity] = useState<Severity | null | undefined>(undefined);
   const noteForm = useForm<CaseNoteFormData>({
     resolver: zodResolver(caseNoteSchema),
     defaultValues: { body: '' },
@@ -55,6 +57,12 @@ export function CaseworkerComplaintDetailPage() {
     caseworkerApi.listCaseworkers().then(setCaseworkers).catch(() => undefined);
   }, [id]);
 
+  useEffect(() => {
+    if (!data) return;
+    setDraftAssigneeId(data.complaint.assignedToUserId ?? null);
+    setDraftSeverity(data.complaint.severity ?? null);
+  }, [data?.complaint.id, data?.complaint.assignedToUserId, data?.complaint.severity]);
+
   function resetFeedback() {
     setActionError(null);
     setSuccess(null);
@@ -67,6 +75,12 @@ export function CaseworkerComplaintDetailPage() {
   const contact = c.complainantContact;
   const labelFor = (value: string) => grounds.find((g) => g.value === value)?.label ?? value;
   const nextOptions = allowedNextStatuses(c.status);
+  const savedAssigneeId = c.assignedToUserId ?? null;
+  const savedSeverity = c.severity ?? null;
+  const currentDraftAssignee = draftAssigneeId === undefined ? savedAssigneeId : draftAssigneeId;
+  const currentDraftSeverity = draftSeverity === undefined ? savedSeverity : draftSeverity;
+  const assigneeDirty = currentDraftAssignee !== savedAssigneeId;
+  const severityDirty = currentDraftSeverity !== savedSeverity;
 
   async function changeStatus(data: StatusChangeFormData) {
     if (!id) return;
@@ -88,12 +102,13 @@ export function CaseworkerComplaintDetailPage() {
     }
   }
 
-  async function setSeverity(severity: Severity) {
+  async function applySeverity(severity: Severity) {
     if (!id) return;
     setBusy(true);
     resetFeedback();
     try {
-      setData(await caseworkerApi.setSeverity(id, severity));
+      const updated = await caseworkerApi.setSeverity(id, severity);
+      setData(updated);
       setSuccess(`Severity set to ${severity}.`);
     } catch {
       setActionError('Could not set severity.');
@@ -355,14 +370,34 @@ export function CaseworkerComplaintDetailPage() {
                 <select
                   id="assignee"
                   className="input"
-                  value={c.assignedToUserId ?? ''}
+                  value={currentDraftAssignee ?? ''}
                   disabled={busy}
-                  onChange={(e) => assign(e.target.value || null)}
+                  onChange={(e) => setDraftAssigneeId(e.target.value || null)}
                 >
                   <option value="">Unassigned</option>
                   {caseworkers.map((cw) => <option key={cw.id} value={cw.id}>{cw.name}</option>)}
                 </select>
               </div>
+              {assigneeDirty && (
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={busy}
+                    onClick={() => assign(currentDraftAssignee)}
+                  >
+                    Update assignment
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    disabled={busy}
+                    onClick={() => setDraftAssigneeId(savedAssigneeId)}
+                  >
+                    Reset
+                  </button>
+                </div>
+              )}
               <div className="flex flex-wrap gap-2">
                 {user && c.assignedToUserId !== user.id && (
                   <button type="button" className="btn-secondary" disabled={busy} onClick={() => assign(user.id)}>
@@ -410,18 +445,47 @@ export function CaseworkerComplaintDetailPage() {
           <section className="card p-5">
             <h2 className="mb-3 font-semibold text-navy-900">Severity</h2>
             <div className="flex flex-wrap gap-2">
-              {SEVERITIES.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  disabled={busy}
-                  className={`btn ${c.severity === s ? 'btn-primary' : 'btn-secondary'}`}
-                  onClick={() => setSeverity(s)}
-                >
-                  {s}
-                </button>
-              ))}
+              {SEVERITIES.map((s) => {
+                const isSaved = savedSeverity === s;
+                const isPending = severityDirty && currentDraftSeverity === s;
+                const className = isPending
+                  ? 'btn btn-secondary ring-2 ring-accent-500'
+                  : isSaved
+                    ? 'btn btn-primary'
+                    : 'btn btn-secondary';
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    disabled={busy}
+                    className={className}
+                    onClick={() => setDraftSeverity(s)}
+                  >
+                    {s}
+                  </button>
+                );
+              })}
             </div>
+            {severityDirty && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="btn-primary"
+                  disabled={busy || currentDraftSeverity == null}
+                  onClick={() => currentDraftSeverity && applySeverity(currentDraftSeverity)}
+                >
+                  Update severity
+                </button>
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  disabled={busy}
+                  onClick={() => setDraftSeverity(savedSeverity)}
+                >
+                  Reset
+                </button>
+              </div>
+            )}
           </section>
 
           <section className="card p-5">
