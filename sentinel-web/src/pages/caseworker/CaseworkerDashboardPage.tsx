@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { caseworkerApi } from '../../api/caseworker';
 import type { AnalyticsDto, DashboardSummaryDto } from '../../types';
+import { CaseworkerPageHeader } from '../../components/CaseworkerPageHeader';
 import { Spinner } from '../../components/Spinner';
 
 // Palettes mirror StatusBadge / SeverityBadge so the charts stay visually consistent.
@@ -60,10 +61,7 @@ export function CaseworkerDashboardPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Caseworker dashboard</h1>
-        <Link to="/caseworker/queue" className="btn-primary">Open the triage queue</Link>
-      </div>
+      <CaseworkerPageHeader title="Caseworker dashboard" />
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">My work</h2>

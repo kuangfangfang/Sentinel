@@ -148,7 +148,7 @@ The current working branch includes:
 - caseworker complaint assignment (claim / reassign / unassign) with an audited `ComplaintAssigned` event
 - caseworker detail page evidence-file download and inline (non-fatal) action error handling
 - caseworker success feedback banners for status, severity, note, and assignment actions
-- triage queue sorting controls, lodged-date range filter, and an assignee column with an "assigned to me / unassigned" filter
+- triage queue sorting controls, lodged-date range filter, an "open cases only" checkbox, and an assignee column with an "assigned to me / unassigned" filter
 - memoised grounds reference list in the frontend API client
 - complaint wizard UX improvements
 - local CORS support for both `localhost` and `127.0.0.1`
@@ -166,8 +166,41 @@ The current working branch includes:
 - mobile step label improvements
 - favicon support and cleanup of broken punctuation in `index.html`
 
+## Caseworker UX notes
+
+### Page navigation (breadcrumbs)
+
+Caseworker in-page navigation uses a single **breadcrumb** pattern via `Breadcrumb` and `CaseworkerPageHeader`:
+
+- **Dashboard** (root): title only, no breadcrumb; queue entry via top nav or signal cards (not a header `btn-primary`).
+- **Queue:** `Dashboard / Triage queue`
+- **Complaint detail:** `Dashboard / Triage queue / {reference or title}` — the queue segment preserves queue URL query params when returning to the list.
+
+`btn-primary` / `btn-secondary` on caseworker pages are reserved for **form actions** (search, status change, assignment), not page-to-page navigation. Row-level **Open** links and dashboard **SignalCard** deep-links remain separate patterns.
+
+### Open-only queue filter (`openOnly`)
+
+`OpenOnly` is a backend/URL filter that limits the triage queue to **open** complaints only:
+
+- **Included:** `Submitted`, `UnderReview`, `MoreInfoNeeded`
+- **Excluded:** `Resolved`, `Closed`, `Withdrawn`
+
+It is implemented in `CaseworkerService.GetQueueAsync` and exposed as the query param `openOnly=1`. Dashboard signal cards (e.g. "Assigned to me (open)", "High / Critical open") deep-link into the queue with this param pre-applied. `QueuePage` also exposes an **Open cases only** checkbox (synced to the URL) alongside sort and assignment controls.
+
+### Mobile / responsive (caseworker)
+
+The **complainant/public** flow is mobile-first. The **caseworker** area is **desktop-primary** with basic responsive fallbacks:
+
+- Queue: table on `lg+`, card list below `lg`; filter form uses responsive grid
+- Dashboard: responsive card grids and `ResponsiveContainer` charts (stack on narrow viewports)
+- Detail: `lg:grid-cols-3` collapses to a single column on small screens
+
+This is sufficient for demo and office use but is **not** full mobile adaptation (e.g. collapsible queue filters, compact chart legends, sticky triage actions on detail). **Planned follow-up:** dedicated caseworker mobile polish if phone triage becomes a requirement.
+
 ## Most Relevant Files
 
+- `sentinel-web/src/components/Breadcrumb.tsx`
+- `sentinel-web/src/components/CaseworkerPageHeader.tsx`
 - `sentinel-web/src/pages/caseworker/QueuePage.tsx`
 - `sentinel-web/src/pages/caseworker/queueNavigation.ts`
 - `sentinel-web/src/pages/caseworker/CaseworkerComplaintDetailPage.tsx`

@@ -8,6 +8,7 @@ import { complaintsApi } from '../../api/complaints';
 import { ApiError } from '../../api/client';
 import type { CaseworkerComplaintDetailDto, CaseworkerOptionDto, ComplaintStatus, GroundDto, Severity } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { CaseworkerPageHeader } from '../../components/CaseworkerPageHeader';
 import { Spinner } from '../../components/Spinner';
 import { SeverityBadge, StatusBadge } from '../../components/StatusBadge';
 import { StatusTimeline } from '../../components/StatusTimeline';
@@ -150,29 +151,28 @@ export function CaseworkerComplaintDetailPage() {
     }
   }
 
+  const breadcrumbLeaf = c.referenceCode ?? (c.title.length > 48 ? `${c.title.slice(0, 48)}…` : c.title);
+
   return (
     <div className="space-y-6">
-      <Link
-        to={queueReturnTo}
-        state={id ? { focusComplaintId: id } : undefined}
-        className="text-sm font-medium text-accent-700 hover:underline"
+      <CaseworkerPageHeader
+        breadcrumbs={[
+          { label: 'Dashboard', to: '/caseworker' },
+          { label: 'Triage queue', to: queueReturnTo },
+          { label: breadcrumbLeaf },
+        ]}
+        title={c.title}
       >
-        Back to queue
-      </Link>
-
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          {c.referenceCode && <p className="font-mono text-sm text-slate-500">{c.referenceCode}</p>}
-          <h1 className="text-2xl font-bold">{c.title}</h1>
+        <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
           <p className="text-sm text-slate-500">
             {c.isAnonymous ? 'Anonymous complainant' : 'Registered complainant'} - Lodged {formatDateTime(c.submittedAt)}
           </p>
+          <div className="flex items-center gap-2">
+            <StatusBadge status={c.status} />
+            <SeverityBadge severity={c.severity} />
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <StatusBadge status={c.status} />
-          <SeverityBadge severity={c.severity} />
-        </div>
-      </div>
+      </CaseworkerPageHeader>
 
       {success && (
         <div className="flex items-start justify-between gap-3 rounded-lg bg-green-50 p-3 text-sm text-green-800" role="status">

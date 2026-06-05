@@ -13,6 +13,7 @@ import {
 import { caseworkerApi } from '../../api/caseworker';
 import { complaintsApi } from '../../api/complaints';
 import type { ComplaintStatus, GroundDto, GroundType, PagedResult, QueueItemDto, QueueQuery, Severity } from '../../types';
+import { CaseworkerPageHeader } from '../../components/CaseworkerPageHeader';
 import { Spinner } from '../../components/Spinner';
 import { SeverityBadge, StatusBadge } from '../../components/StatusBadge';
 import { formatDate } from '../../utils/format';
@@ -135,15 +136,22 @@ export function QueuePage() {
     });
   }
 
+  function toggleOpenOnly(checked: boolean) {
+    patch({ openOnly: checked ? true : undefined });
+  }
+
   const assignmentValue: 'all' | 'me' | 'unassigned' =
     query.unassigned ? 'unassigned' : query.assigneeUserId ? 'me' : 'all';
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Triage queue</h1>
-        <Link to="/caseworker" className="btn-ghost">Dashboard</Link>
-      </div>
+      <CaseworkerPageHeader
+        breadcrumbs={[
+          { label: 'Dashboard', to: '/caseworker' },
+          { label: 'Triage queue' },
+        ]}
+        title="Triage queue"
+      />
 
       <div className="card p-4">
         <form onSubmit={handleSubmit(onSearch)} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -244,6 +252,18 @@ export function QueuePage() {
             <option value="me">Assigned to me</option>
             <option value="unassigned">Unassigned</option>
           </select>
+        </div>
+        <div className="flex items-center gap-2 self-center pb-1">
+          <input
+            id="openOnly"
+            type="checkbox"
+            className="h-4 w-4 rounded border-slate-300 text-accent-600 focus:ring-accent-500"
+            checked={!!query.openOnly}
+            onChange={(e) => toggleOpenOnly(e.target.checked)}
+          />
+          <label htmlFor="openOnly" className="text-sm font-medium text-slate-700">
+            Open cases only
+          </label>
         </div>
       </div>
 

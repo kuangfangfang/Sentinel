@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## 2026-06-05 — Caseworker breadcrumb navigation
+
+### Improvements
+
+- Unified caseworker page navigation with `Breadcrumb` and `CaseworkerPageHeader`: queue shows `Dashboard / Triage queue`; complaint detail shows `Dashboard / Triage queue / {reference}`.
+- Removed mixed navigation styles (header `btn-primary` queue CTA, `← Dashboard` text link, standalone `Back to queue` link). Dashboard queue entry is via top nav or signal cards; form buttons are no longer used for page-to-page navigation.
+
+### Verification
+
+- Passed `npm run build`.
+
+## 2026-06-05 — Queue open-only filter UI
+
+### Improvements
+
+- Added an **Open cases only** checkbox to the triage queue (beside sort and assignment controls), synced to the `openOnly=1` URL param so dashboard deep-links and manual toggling behave the same.
+
+### Notes
+
+- Documented caseworker as desktop-primary with basic responsive layout only; full mobile adaptation deferred to a later pass.
+
 ## 2026-06-05 — Queue pagination and scroll restoration
 
 ### Improvements
