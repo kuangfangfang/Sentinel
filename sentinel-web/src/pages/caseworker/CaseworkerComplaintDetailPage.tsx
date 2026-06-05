@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 import { caseworkerApi } from '../../api/caseworker';
 import { complaintsApi } from '../../api/complaints';
 import { ApiError } from '../../api/client';
@@ -158,7 +158,7 @@ export function CaseworkerComplaintDetailPage() {
       <CaseworkerPageHeader
         breadcrumbs={[
           { label: 'Dashboard', to: '/caseworker' },
-          { label: 'Triage queue', to: queueReturnTo },
+          { label: 'Triage queue', to: queueReturnTo, state: id ? { focusComplaintId: id } : undefined },
           { label: breadcrumbLeaf },
         ]}
         title={c.title}

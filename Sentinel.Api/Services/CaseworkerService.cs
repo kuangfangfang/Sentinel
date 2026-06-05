@@ -44,6 +44,13 @@ public class CaseworkerService
             query = query.Where(c => c.Status == ComplaintStatus.Submitted
                 || c.Status == ComplaintStatus.UnderReview
                 || c.Status == ComplaintStatus.MoreInfoNeeded);
+        if (q.HighSeverityOnly == true)
+            query = query.Where(c => c.Severity == Severity.High || c.Severity == Severity.Critical);
+        if (q.AgingDays is { } agingDays and > 0)
+        {
+            var agingCutoff = DateTime.UtcNow.AddDays(-agingDays);
+            query = query.Where(c => c.SubmittedAt != null && c.SubmittedAt < agingCutoff);
+        }
         if (q.Status is { } status) query = query.Where(c => c.Status == status);
         if (q.Severity is { } severity) query = query.Where(c => c.Severity == severity);
         if (q.Ground is { } ground) query = query.Where(c => c.Grounds.Any(g => g.GroundType == ground));

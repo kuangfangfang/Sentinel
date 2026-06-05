@@ -395,6 +395,9 @@ function parseInitialQuery(params: URLSearchParams, userId?: string): QueueQuery
   if (params.get('unassigned') === '1') q.unassigned = true;
   else if (params.get('assignee') === 'me' && userId) q.assigneeUserId = userId;
   if (params.get('openOnly') === '1') q.openOnly = true;
+  if (params.get('highSeverityOnly') === '1') q.highSeverityOnly = true;
+  const agingDays = Number(params.get('agingDays'));
+  if (Number.isFinite(agingDays) && agingDays > 0) q.agingDays = Math.floor(agingDays);
   const sort = params.get('sort');
   if (sort) q.sortBy = sort;
   const dir = params.get('dir');
@@ -415,6 +418,8 @@ function queueQueryToParams(query: QueueQuery, userId?: string): URLSearchParams
   if (query.unassigned) params.set('unassigned', '1');
   else if (query.assigneeUserId && query.assigneeUserId === userId) params.set('assignee', 'me');
   if (query.openOnly) params.set('openOnly', '1');
+  if (query.highSeverityOnly) params.set('highSeverityOnly', '1');
+  if (query.agingDays && query.agingDays > 0) params.set('agingDays', String(query.agingDays));
   const sortBy = query.sortBy ?? DEFAULT_QUERY.sortBy!;
   const sortDescending = query.sortDescending ?? DEFAULT_QUERY.sortDescending!;
   if (sortBy !== DEFAULT_QUERY.sortBy || sortDescending !== DEFAULT_QUERY.sortDescending) {

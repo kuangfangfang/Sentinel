@@ -310,4 +310,6 @@ export interface QueueQuery {
   assigneeUserId?: string;
   unassigned?: boolean;
   openOnly?: boolean;
+  highSeverityOnly?: boolean;
+  agingDays?: number;
 }

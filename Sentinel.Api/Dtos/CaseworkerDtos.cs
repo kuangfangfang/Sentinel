@@ -24,6 +24,10 @@ public class QueueQuery
     public bool? Unassigned { get; set; }
     /// <summary>When true, show only open complaints (Submitted, UnderReview, MoreInfoNeeded).</summary>
     public bool? OpenOnly { get; set; }
+    /// <summary>When true, show only High or Critical severity complaints.</summary>
+    public bool? HighSeverityOnly { get; set; }
+    /// <summary>When set, show complaints lodged more than this many days ago (matches dashboard aging count).</summary>
+    public int? AgingDays { get; set; }
 }
 
 public record QueueItemDto(

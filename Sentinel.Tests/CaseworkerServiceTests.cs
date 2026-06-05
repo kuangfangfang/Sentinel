@@ -182,6 +182,47 @@ public class CaseworkerServiceTests
     }
 
     [Fact]
+    public async Task The_queue_can_be_filtered_to_high_severity_only()
+    {
+        using var db = NewDb();
+        var users = NewUserManager(db);
+        db.Complaints.AddRange(
+            new Complaint { Title = "Low", Description = "Low severity open.", Status = ComplaintStatus.Submitted, Severity = Severity.Low, ReferenceCode = "SEN-LOW01" },
+            new Complaint { Title = "High", Description = "High severity open.", Status = ComplaintStatus.UnderReview, Severity = Severity.High, ReferenceCode = "SEN-HIG01" },
+            new Complaint { Title = "Critical", Description = "Critical severity open.", Status = ComplaintStatus.MoreInfoNeeded, Severity = Severity.Critical, ReferenceCode = "SEN-CRT01" },
+            new Complaint { Title = "Resolved high", Description = "Resolved high.", Status = ComplaintStatus.Resolved, Severity = Severity.High, ReferenceCode = "SEN-RHI01" });
+        await db.SaveChangesAsync();
+        var service = NewService(db, users, currentUserId: Guid.NewGuid());
+
+        var result = await service.GetQueueAsync(new QueueQuery { OpenOnly = true, HighSeverityOnly = true }, default);
+
+        result.Items.Should().HaveCount(2);
+        result.Items.Should().OnlyContain(i =>
+            (i.Severity == Severity.High || i.Severity == Severity.Critical)
+            && (i.Status == ComplaintStatus.Submitted
+                || i.Status == ComplaintStatus.UnderReview
+                || i.Status == ComplaintStatus.MoreInfoNeeded));
+    }
+
+    [Fact]
+    public async Task The_queue_can_be_filtered_by_aging_days()
+    {
+        using var db = NewDb();
+        var users = NewUserManager(db);
+        var now = DateTime.UtcNow;
+        db.Complaints.AddRange(
+            new Complaint { Title = "Recent", Description = "Recent open.", Status = ComplaintStatus.Submitted, SubmittedAt = now.AddDays(-5), ReferenceCode = "SEN-REC01" },
+            new Complaint { Title = "Aging", Description = "Aging open.", Status = ComplaintStatus.UnderReview, SubmittedAt = now.AddDays(-40), ReferenceCode = "SEN-AGE01" });
+        await db.SaveChangesAsync();
+        var service = NewService(db, users, currentUserId: Guid.NewGuid());
+
+        var result = await service.GetQueueAsync(new QueueQuery { OpenOnly = true, AgingDays = 30 }, default);
+
+        result.Items.Should().ContainSingle();
+        result.Items[0].Title.Should().Be("Aging");
+    }
+
+    [Fact]
     public async Task Dashboard_counts_reflect_open_unassigned_aging_and_severity()
     {
         using var db = NewDb();

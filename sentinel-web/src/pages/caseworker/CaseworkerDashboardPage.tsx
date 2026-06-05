@@ -74,10 +74,10 @@ export function CaseworkerDashboardPage() {
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Needs attention</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <SignalCard label="Unassigned" value={summary.unassigned} hint="Awaiting triage" to="/caseworker/queue?unassigned=1" />
+          <SignalCard label="Unassigned" value={summary.unassigned} hint="Awaiting triage" to="/caseworker/queue?unassigned=1&openOnly=1" />
           <SignalCard label="More info needed" value={summary.byStatus['MoreInfoNeeded'] ?? 0} hint="Waiting on complainant" to="/caseworker/queue?status=MoreInfoNeeded" />
-          <SignalCard label="High / Critical open" value={summary.highSeverityOpen} hint="Highest severity first" to="/caseworker/queue?openOnly=1&sort=severity&dir=desc" />
-          <SignalCard label="Aging open (>30 days)" value={summary.agingOpen} hint="Oldest first" to="/caseworker/queue?openOnly=1&sort=submitted&dir=asc" />
+          <SignalCard label="High / Critical open" value={summary.highSeverityOpen} hint="Highest severity first" to="/caseworker/queue?openOnly=1&highSeverityOnly=1&sort=severity&dir=desc" />
+          <SignalCard label="Aging open (>30 days)" value={summary.agingOpen} hint="Oldest first" to="/caseworker/queue?openOnly=1&agingDays=30&sort=submitted&dir=asc" />
         </div>
       </section>
 
