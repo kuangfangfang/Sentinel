@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { caseworkerApi } from '../../api/caseworker';
 import { complaintsApi } from '../../api/complaints';
 import { ApiError } from '../../api/client';
@@ -14,6 +14,7 @@ import { StatusTimeline } from '../../components/StatusTimeline';
 import { formatDateOnly, formatDateTime } from '../../utils/format';
 import { allowedNextStatuses } from '../../utils/statusTransitions';
 import { caseNoteSchema, statusChangeSchema } from '../../validation/schemas';
+import { readQueueReturnState } from './queueNavigation';
 
 const SEVERITIES: Severity[] = ['Low', 'Medium', 'High', 'Critical'];
 type CaseNoteFormData = z.infer<typeof caseNoteSchema>;
@@ -21,7 +22,10 @@ type StatusChangeFormData = z.infer<typeof statusChangeSchema>;
 
 export function CaseworkerComplaintDetailPage() {
   const { id } = useParams();
+  const location = useLocation();
   const { user } = useAuth();
+  const queueReturn = readQueueReturnState(location.state);
+  const queueReturnTo = `/caseworker/queue${queueReturn?.queueSearch ?? ''}`;
   const [data, setData] = useState<CaseworkerComplaintDetailDto | null>(null);
   const [grounds, setGrounds] = useState<GroundDto[]>([]);
   const [caseworkers, setCaseworkers] = useState<CaseworkerOptionDto[]>([]);
@@ -148,7 +152,13 @@ export function CaseworkerComplaintDetailPage() {
 
   return (
     <div className="space-y-6">
-      <Link to="/caseworker/queue" className="text-sm font-medium text-accent-700 hover:underline">Back to queue</Link>
+      <Link
+        to={queueReturnTo}
+        state={id ? { focusComplaintId: id } : undefined}
+        className="text-sm font-medium text-accent-700 hover:underline"
+      >
+        Back to queue
+      </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>

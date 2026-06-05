@@ -144,7 +144,7 @@ Important coverage includes:
 
 The current working branch includes:
 - an operational-first caseworker dashboard: personal "My work" and team "Needs attention" signal cards that deep-link into a pre-filtered queue, plus status/severity donuts and a Lodged-vs-Resolved monthly chart
-- queue deep-linking via URL query params and an `OpenOnly` queue filter
+- queue deep-linking via URL query params (including `page`) and an `OpenOnly` queue filter; returning from complaint detail restores page, filters, and scroll position to the opened row
 - caseworker complaint assignment (claim / reassign / unassign) with an audited `ComplaintAssigned` event
 - caseworker detail page evidence-file download and inline (non-fatal) action error handling
 - caseworker success feedback banners for status, severity, note, and assignment actions
@@ -169,6 +169,7 @@ The current working branch includes:
 ## Most Relevant Files
 
 - `sentinel-web/src/pages/caseworker/QueuePage.tsx`
+- `sentinel-web/src/pages/caseworker/queueNavigation.ts`
 - `sentinel-web/src/pages/caseworker/CaseworkerComplaintDetailPage.tsx`
 - `sentinel-web/src/api/caseworker.ts`
 - `Sentinel.Api/Services/CaseworkerService.cs`

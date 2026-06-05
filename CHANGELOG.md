@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## 2026-06-05 — Queue pagination and scroll restoration
+
+### Improvements
+
+- Synced triage queue filters and page number to the URL (`page`, plus existing filter/sort params), so returning from a complaint detail restores the same page and filter set.
+- Returning from a complaint detail (Back to queue or browser back) scrolls to the previously opened row and briefly highlights it; refresh and direct navigation no longer trigger stale scroll restoration.
+- Extracted queue return/scroll helpers into `sentinel-web/src/pages/caseworker/queueNavigation.ts` (manual row-centring scroll because `scrollIntoView` on table rows is unreliable).
+
+### Verification
+
+- Passed `npm run build`.
+
 ## 2026-06-05 — Caseworker dashboard enrichment
 
 ### Features

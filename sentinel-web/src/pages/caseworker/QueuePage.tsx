@@ -1,8 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
+import {
+  buildQueueOpenState,
+  clearQueueFocus,
+  findVisibleQueueItem,
+  resolveQueueFocusId,
+  scrollQueueItemIntoView,
+} from './queueNavigation';
 import { caseworkerApi } from '../../api/caseworker';
 import { complaintsApi } from '../../api/complaints';
 import type { ComplaintStatus, GroundDto, GroundType, PagedResult, QueueItemDto, QueueQuery, Severity } from '../../types';
@@ -26,12 +33,15 @@ type QueueFilterData = z.infer<typeof queueFilterSchema>;
 
 export function QueuePage() {
   const { user } = useAuth();
-  const [searchParams] = useSearchParams();
-  const [query, setQuery] = useState<QueueQuery>(() => parseInitialQuery(searchParams, user?.id));
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const query = useMemo(() => parseInitialQuery(searchParams, user?.id), [searchParams, user?.id]);
   const [result, setResult] = useState<PagedResult<QueueItemDto> | null>(null);
   const [grounds, setGrounds] = useState<GroundDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const focusHandledRef = useRef<string | null>(null);
   const { register, handleSubmit, reset } = useForm<QueueFilterData>({
     resolver: zodResolver(queueFilterSchema),
     defaultValues: parseInitialFilters(searchParams),
@@ -41,6 +51,10 @@ export function QueuePage() {
   useEffect(() => {
     complaintsApi.getGrounds().then(setGrounds).catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    reset(parseInitialFilters(searchParams));
+  }, [searchParams, reset]);
 
   useEffect(() => {
     let active = true;
@@ -55,8 +69,39 @@ export function QueuePage() {
     };
   }, [query]);
 
+  const items = result?.items ?? [];
+
+  useEffect(() => {
+    if (loading || items.length === 0) return;
+
+    const focusId = resolveQueueFocusId(location.state);
+    if (!focusId || !items.some((c) => c.id === focusId)) return;
+
+    const handleKey = `${location.key}:${focusId}`;
+    if (focusHandledRef.current === handleKey) return;
+    focusHandledRef.current = handleKey;
+
+    const frame = requestAnimationFrame(() => {
+      const row = findVisibleQueueItem(focusId);
+      if (!row) return;
+      scrollQueueItemIntoView(row);
+      setHighlightId(focusId);
+      clearQueueFocus();
+    });
+
+    const timer = window.setTimeout(() => setHighlightId(null), 2000);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [loading, items, location.key, location.pathname, location.search, location.state]);
+
+  function updateQuery(next: QueueQuery) {
+    setSearchParams(queueQueryToParams(next, user?.id), { replace: false });
+  }
+
   function patch(p: Partial<QueueQuery>) {
-    setQuery((q) => ({ ...q, page: 1, ...p }));
+    updateQuery({ ...query, page: 1, ...p });
   }
 
   function onSearch(data: QueueFilterData) {
@@ -72,15 +117,15 @@ export function QueuePage() {
 
   function clearFilters() {
     reset(DEFAULT_FILTERS);
-    setQuery(DEFAULT_QUERY);
+    updateQuery(DEFAULT_QUERY);
   }
 
   function changeSort(sortBy: string) {
-    setQuery((q) => ({ ...q, page: 1, sortBy }));
+    updateQuery({ ...query, page: 1, sortBy });
   }
 
   function toggleDirection() {
-    setQuery((q) => ({ ...q, page: 1, sortDescending: !q.sortDescending }));
+    updateQuery({ ...query, page: 1, sortDescending: !query.sortDescending });
   }
 
   function changeAssignment(value: 'all' | 'me' | 'unassigned') {
@@ -92,8 +137,6 @@ export function QueuePage() {
 
   const assignmentValue: 'all' | 'me' | 'unassigned' =
     query.unassigned ? 'unassigned' : query.assigneeUserId ? 'me' : 'all';
-
-  const items = result?.items ?? [];
 
   return (
     <div className="space-y-6">
@@ -226,7 +269,14 @@ export function QueuePage() {
                   </thead>
                   <tbody className="divide-y divide-slate-100 bg-white">
                     {items.map((c) => (
-                      <tr key={c.id} className="hover:bg-slate-50">
+                      <tr
+                        key={c.id}
+                        data-queue-item={c.id}
+                        className={[
+                          'scroll-mt-24 transition-colors',
+                          highlightId === c.id ? 'bg-accent-50 ring-2 ring-inset ring-accent-200' : 'hover:bg-slate-50',
+                        ].join(' ')}
+                      >
                         <td className="px-4 py-3 font-mono text-xs text-slate-600">{c.referenceCode ?? '-'}</td>
                         <td className="max-w-xs truncate px-4 py-3 font-medium text-navy-900">{c.title}</td>
                         <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
@@ -237,7 +287,13 @@ export function QueuePage() {
                           {c.assignedToName ?? <span className="text-slate-400">Unassigned</span>}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <Link to={`/caseworker/complaints/${c.id}`} className="font-medium text-accent-700 hover:underline">Open</Link>
+                          <Link
+                            to={`/caseworker/complaints/${c.id}`}
+                            state={buildQueueOpenState(location.search, c.id)}
+                            className="font-medium text-accent-700 hover:underline"
+                          >
+                            Open
+                          </Link>
                         </td>
                       </tr>
                     ))}
@@ -247,12 +303,23 @@ export function QueuePage() {
 
               <ul className="space-y-3 lg:hidden">
                 {items.map((c) => (
-                  <li key={c.id} className="card p-4">
+                  <li
+                    key={c.id}
+                    data-queue-item={c.id}
+                    className={[
+                      'card scroll-mt-24 p-4 transition-shadow',
+                      highlightId === c.id ? 'ring-2 ring-accent-300' : '',
+                    ].join(' ')}
+                  >
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-mono text-xs text-slate-500">{c.referenceCode ?? '-'}</span>
                       <StatusBadge status={c.status} />
                     </div>
-                    <Link to={`/caseworker/complaints/${c.id}`} className="mt-1 block font-semibold text-navy-900 hover:underline">
+                    <Link
+                      to={`/caseworker/complaints/${c.id}`}
+                      state={buildQueueOpenState(location.search, c.id)}
+                      className="mt-1 block font-semibold text-navy-900 hover:underline"
+                    >
                       {c.title}
                     </Link>
                     <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-600">
@@ -266,13 +333,19 @@ export function QueuePage() {
               </ul>
 
               <div className="flex items-center justify-between">
-                <button className="btn-secondary" disabled={query.page! <= 1}
-                  onClick={() => setQuery((q) => ({ ...q, page: (q.page ?? 1) - 1 }))}>
+                <button
+                  className="btn-secondary"
+                  disabled={query.page! <= 1}
+                  onClick={() => updateQuery({ ...query, page: (query.page ?? 1) - 1 })}
+                >
                   Previous
                 </button>
                 <span className="text-sm text-slate-500">Page {result.page} of {Math.max(result.totalPages, 1)}</span>
-                <button className="btn-secondary" disabled={result.page >= result.totalPages}
-                  onClick={() => setQuery((q) => ({ ...q, page: (q.page ?? 1) + 1 }))}>
+                <button
+                  className="btn-secondary"
+                  disabled={result.page >= result.totalPages}
+                  onClick={() => updateQuery({ ...query, page: (query.page ?? 1) + 1 })}
+                >
                   Next
                 </button>
               </div>
@@ -306,7 +379,30 @@ function parseInitialQuery(params: URLSearchParams, userId?: string): QueueQuery
   if (sort) q.sortBy = sort;
   const dir = params.get('dir');
   if (dir) q.sortDescending = dir !== 'asc';
+  const page = Number(params.get('page'));
+  if (Number.isFinite(page) && page > 1) q.page = Math.floor(page);
   return q;
+}
+
+function queueQueryToParams(query: QueueQuery, userId?: string): URLSearchParams {
+  const params = new URLSearchParams();
+  if (query.search) params.set('search', query.search);
+  if (query.status) params.set('status', query.status);
+  if (query.severity) params.set('severity', query.severity);
+  if (query.ground) params.set('ground', query.ground);
+  if (query.fromDate) params.set('fromDate', query.fromDate);
+  if (query.toDate) params.set('toDate', query.toDate);
+  if (query.unassigned) params.set('unassigned', '1');
+  else if (query.assigneeUserId && query.assigneeUserId === userId) params.set('assignee', 'me');
+  if (query.openOnly) params.set('openOnly', '1');
+  const sortBy = query.sortBy ?? DEFAULT_QUERY.sortBy!;
+  const sortDescending = query.sortDescending ?? DEFAULT_QUERY.sortDescending!;
+  if (sortBy !== DEFAULT_QUERY.sortBy || sortDescending !== DEFAULT_QUERY.sortDescending) {
+    params.set('sort', sortBy);
+    params.set('dir', sortDescending ? 'desc' : 'asc');
+  }
+  if (query.page && query.page > 1) params.set('page', String(query.page));
+  return params;
 }
 
 function parseInitialFilters(params: URLSearchParams): QueueFilterData {
