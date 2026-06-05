@@ -63,6 +63,6 @@ public record SetSeverityRequest
 public record DashboardSummaryDto(
     int Total, int OpenCount, Dictionary<string, int> ByStatus, Dictionary<string, int> ByGround);
 
-public record CategoryCountDto(string Category, int Count);
+public record CategoryCountDto(string Category, string ShortCategory, int Count);
 public record MonthCountDto(string Month, int Count);
 public record AnalyticsDto(List<CategoryCountDto> ByGround, List<MonthCountDto> ByMonth);

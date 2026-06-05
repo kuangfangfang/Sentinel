@@ -274,6 +274,7 @@ export interface DashboardSummaryDto {
 
 export interface CategoryCountDto {
   category: string;
+  shortCategory: string;
   count: number;
 }
 

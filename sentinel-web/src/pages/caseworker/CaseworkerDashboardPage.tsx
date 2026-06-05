@@ -24,6 +24,9 @@ export function CaseworkerDashboardPage() {
   if (error) return <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">{error}</div>;
   if (!summary || !analytics) return <Spinner />;
 
+  // The chart axis shows concise ground names; the tooltip restores the full label.
+  const fullLabelByShort = Object.fromEntries(analytics.byGround.map((g) => [g.shortCategory, g.category]));
+
   const stats = [
     { label: 'Total complaints', value: summary.total },
     { label: 'Open', value: summary.openCount },
@@ -57,12 +60,12 @@ export function CaseworkerDashboardPage() {
                 <XAxis type="number" allowDecimals={false} />
                 <YAxis
                   type="category"
-                  dataKey="category"
-                  width={180}
+                  dataKey="shortCategory"
+                  width={150}
                   interval={0}
-                  tick={<CategoryTick />}
+                  tick={{ fontSize: 12 }}
                 />
-                <Tooltip />
+                <Tooltip labelFormatter={(label) => fullLabelByShort[String(label)] ?? label} />
                 <Bar dataKey="count" fill="#2563eb" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -100,20 +103,5 @@ export function CaseworkerDashboardPage() {
         </section>
       </div>
     </div>
-  );
-}
-
-// Long ground labels (e.g. "I have been victimised for making, or trying to make, a
-// complaint") wrap and overlap on a fixed-height axis. Render them on a single line,
-// truncating with an ellipsis; the full label stays available via hover and the tooltip.
-function CategoryTick({ x, y, payload }: { x?: number; y?: number; payload?: { value?: string | number } }) {
-  const full = String(payload?.value ?? '');
-  const maxChars = 26;
-  const text = full.length > maxChars ? `${full.slice(0, maxChars - 1)}\u2026` : full;
-  return (
-    <text x={x} y={y} dy={4} textAnchor="end" fontSize={12} fill="#475569">
-      <title>{full}</title>
-      {text}
-    </text>
   );
 }

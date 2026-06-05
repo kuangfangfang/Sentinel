@@ -224,7 +224,12 @@ public class CaseworkerService
             .Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct);
 
         var byGround = byGroundRaw
-            .Select(x => new CategoryCountDto(GroundCatalog.Find(x.Key)?.Label ?? x.Key.ToString(), x.Count))
+            .Select(x =>
+            {
+                var def = GroundCatalog.Find(x.Key);
+                var fallback = x.Key.ToString();
+                return new CategoryCountDto(def?.Label ?? fallback, def?.ShortLabel ?? fallback, x.Count);
+            })
             .OrderByDescending(x => x.Count).ToList();
 
         // Last 12 months of submissions, grouped by calendar month.

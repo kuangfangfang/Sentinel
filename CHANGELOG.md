@@ -15,6 +15,7 @@
 - Caseworker complaint detail action errors (status, severity, note, assignment) now show inline and dismissibly instead of replacing the whole page; only load failures gate the view.
 - Added dismissible success banners for caseworker status, severity, note, and assignment actions.
 - Memoised the static grounds reference list in the frontend API client so the wizard, queue, and detail pages no longer refetch it.
+- Added concise `ShortLabel`s to the ground catalogue and surfaced them via analytics (`CategoryCountDto.ShortCategory`) so the dashboard "Complaints by category" chart shows full, non-overlapping category names with the full label in the tooltip.
 
 ### Verification
 
