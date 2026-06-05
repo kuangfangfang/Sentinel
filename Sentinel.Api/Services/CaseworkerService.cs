@@ -40,6 +40,10 @@ public class CaseworkerService
         // Caseworkers triage lodged complaints, never other people's drafts.
         var query = _db.Complaints.AsNoTracking().Where(c => c.Status != ComplaintStatus.Draft);
 
+        if (q.OpenOnly == true)
+            query = query.Where(c => c.Status == ComplaintStatus.Submitted
+                || c.Status == ComplaintStatus.UnderReview
+                || c.Status == ComplaintStatus.MoreInfoNeeded);
         if (q.Status is { } status) query = query.Where(c => c.Status == status);
         if (q.Severity is { } severity) query = query.Where(c => c.Severity == severity);
         if (q.Ground is { } ground) query = query.Where(c => c.Grounds.Any(g => g.GroundType == ground));
@@ -196,9 +200,16 @@ public class CaseworkerService
     public async Task<DashboardSummaryDto> GetDashboardAsync(CancellationToken ct)
     {
         var lodged = _db.Complaints.AsNoTracking().Where(c => c.Status != ComplaintStatus.Draft);
+        // "Open" complaints are the ones still needing caseworker action.
+        var open = lodged.Where(c => c.Status == ComplaintStatus.Submitted
+            || c.Status == ComplaintStatus.UnderReview
+            || c.Status == ComplaintStatus.MoreInfoNeeded);
 
         var total = await lodged.CountAsync(ct);
         var byStatusRaw = await lodged.GroupBy(c => c.Status)
+            .Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct);
+        var bySeverityRaw = await lodged.Where(c => c.Severity != null)
+            .GroupBy(c => c.Severity!.Value)
             .Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct);
         var byGroundRaw = await _db.ComplaintGrounds.AsNoTracking()
             .Where(g => g.Complaint!.Status != ComplaintStatus.Draft)
@@ -206,6 +217,7 @@ public class CaseworkerService
             .Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct);
 
         var byStatus = byStatusRaw.ToDictionary(x => x.Key.ToString(), x => x.Count);
+        var bySeverity = bySeverityRaw.ToDictionary(x => x.Key.ToString(), x => x.Count);
         var byGround = byGroundRaw.ToDictionary(
             x => GroundCatalog.Find(x.Key)?.Label ?? x.Key.ToString(), x => x.Count);
 
@@ -213,7 +225,21 @@ public class CaseworkerService
             .Where(x => x.Key is ComplaintStatus.Submitted or ComplaintStatus.UnderReview or ComplaintStatus.MoreInfoNeeded)
             .Sum(x => x.Count);
 
-        return new DashboardSummaryDto(total, openCount, byStatus, byGround);
+        var me = _current.UserId;
+        var agingCutoff = DateTime.UtcNow.AddDays(-30);
+
+        var unassigned = await open.CountAsync(c => c.AssignedToUserId == null, ct);
+        var assignedToMeOpen = me is { } meId ? await open.CountAsync(c => c.AssignedToUserId == meId, ct) : 0;
+        var myAwaitingInfo = me is { } meId2
+            ? await lodged.CountAsync(c => c.Status == ComplaintStatus.MoreInfoNeeded && c.AssignedToUserId == meId2, ct)
+            : 0;
+        var agingOpen = await open.CountAsync(c => c.SubmittedAt != null && c.SubmittedAt < agingCutoff, ct);
+        var highSeverityOpen = await open.CountAsync(
+            c => c.Severity == Severity.High || c.Severity == Severity.Critical, ct);
+
+        return new DashboardSummaryDto(
+            total, openCount, byStatus, byGround, bySeverity,
+            unassigned, assignedToMeOpen, myAwaitingInfo, agingOpen, highSeverityOpen);
     }
 
     public async Task<AnalyticsDto> GetAnalyticsAsync(CancellationToken ct)
@@ -232,21 +258,41 @@ public class CaseworkerService
             })
             .OrderByDescending(x => x.Count).ToList();
 
+        var bySeverityRaw = await _db.Complaints.AsNoTracking()
+            .Where(c => c.Status != ComplaintStatus.Draft && c.Severity != null)
+            .GroupBy(c => c.Severity!.Value)
+            .Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct);
+
+        // Keep severity in natural order (Low -> Critical) rather than by count.
+        var bySeverity = Enum.GetValues<Severity>()
+            .Select(s => new { Key = s, Count = bySeverityRaw.FirstOrDefault(x => x.Key == s)?.Count ?? 0 })
+            .Where(x => x.Count > 0)
+            .Select(x => new CategoryCountDto(x.Key.ToString(), x.Key.ToString(), x.Count))
+            .ToList();
+
         // Last 12 months of submissions, grouped by calendar month.
         var since = DateTime.UtcNow.AddMonths(-11);
-        var monthsRaw = await _db.Complaints.AsNoTracking()
+        var lodgedRaw = await _db.Complaints.AsNoTracking()
             .Where(c => c.SubmittedAt != null && c.SubmittedAt >= since)
             .Select(c => c.SubmittedAt!.Value)
+            .ToListAsync(ct);
+
+        // Distinct complaints resolved in each month (avoids double-counting reopen -> resolve).
+        var resolvedRaw = await _db.StatusHistories.AsNoTracking()
+            .Where(h => h.ToStatus == ComplaintStatus.Resolved && h.ChangedAt >= since)
+            .Select(h => new { h.ComplaintId, h.ChangedAt })
             .ToListAsync(ct);
 
         var byMonth = Enumerable.Range(0, 12)
             .Select(i => DateTime.UtcNow.AddMonths(-11 + i))
             .Select(d => new MonthCountDto(
                 d.ToString("yyyy-MM"),
-                monthsRaw.Count(m => m.Year == d.Year && m.Month == d.Month)))
+                lodgedRaw.Count(m => m.Year == d.Year && m.Month == d.Month),
+                resolvedRaw.Where(r => r.ChangedAt.Year == d.Year && r.ChangedAt.Month == d.Month)
+                    .Select(r => r.ComplaintId).Distinct().Count()))
             .ToList();
 
-        return new AnalyticsDto(byGround, byMonth);
+        return new AnalyticsDto(byGround, bySeverity, byMonth);
     }
 
     // ----- internals -----

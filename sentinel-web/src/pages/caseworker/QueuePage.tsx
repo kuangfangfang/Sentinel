@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { caseworkerApi } from '../../api/caseworker';
 import { complaintsApi } from '../../api/complaints';
-import type { ComplaintStatus, GroundDto, PagedResult, QueueItemDto, QueueQuery, Severity } from '../../types';
+import type { ComplaintStatus, GroundDto, GroundType, PagedResult, QueueItemDto, QueueQuery, Severity } from '../../types';
 import { Spinner } from '../../components/Spinner';
 import { SeverityBadge, StatusBadge } from '../../components/StatusBadge';
 import { formatDate } from '../../utils/format';
@@ -26,14 +26,15 @@ type QueueFilterData = z.infer<typeof queueFilterSchema>;
 
 export function QueuePage() {
   const { user } = useAuth();
-  const [query, setQuery] = useState<QueueQuery>(DEFAULT_QUERY);
+  const [searchParams] = useSearchParams();
+  const [query, setQuery] = useState<QueueQuery>(() => parseInitialQuery(searchParams, user?.id));
   const [result, setResult] = useState<PagedResult<QueueItemDto> | null>(null);
   const [grounds, setGrounds] = useState<GroundDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { register, handleSubmit, reset } = useForm<QueueFilterData>({
     resolver: zodResolver(queueFilterSchema),
-    defaultValues: DEFAULT_FILTERS,
+    defaultValues: parseInitialFilters(searchParams),
     mode: 'onChange',
   });
 
@@ -281,4 +282,40 @@ export function QueuePage() {
       )}
     </div>
   );
+}
+
+// Seeds the queue from a deep link (e.g. dashboard cards), so a shared URL reproduces the view.
+function parseInitialQuery(params: URLSearchParams, userId?: string): QueueQuery {
+  const q: QueueQuery = { ...DEFAULT_QUERY };
+  const status = params.get('status');
+  if (status) q.status = status as ComplaintStatus;
+  const severity = params.get('severity');
+  if (severity) q.severity = severity as Severity;
+  const ground = params.get('ground');
+  if (ground) q.ground = ground as GroundType;
+  const search = params.get('search');
+  if (search) q.search = search;
+  const fromDate = params.get('fromDate');
+  if (fromDate) q.fromDate = fromDate;
+  const toDate = params.get('toDate');
+  if (toDate) q.toDate = toDate;
+  if (params.get('unassigned') === '1') q.unassigned = true;
+  else if (params.get('assignee') === 'me' && userId) q.assigneeUserId = userId;
+  if (params.get('openOnly') === '1') q.openOnly = true;
+  const sort = params.get('sort');
+  if (sort) q.sortBy = sort;
+  const dir = params.get('dir');
+  if (dir) q.sortDescending = dir !== 'asc';
+  return q;
+}
+
+function parseInitialFilters(params: URLSearchParams): QueueFilterData {
+  return {
+    search: params.get('search') ?? '',
+    status: params.get('status') ?? '',
+    severity: params.get('severity') ?? '',
+    ground: params.get('ground') ?? '',
+    fromDate: params.get('fromDate') ?? '',
+    toDate: params.get('toDate') ?? '',
+  };
 }

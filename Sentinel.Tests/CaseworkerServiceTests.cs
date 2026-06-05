@@ -159,4 +159,72 @@ public class CaseworkerServiceTests
         result.Items.Should().OnlyContain(i => i.AssignedToUserId == null);
         result.Items.Should().ContainSingle();
     }
+
+    [Fact]
+    public async Task The_queue_can_be_filtered_to_open_complaints_only()
+    {
+        using var db = NewDb();
+        var users = NewUserManager(db);
+        db.Complaints.AddRange(
+            new Complaint { Title = "Open", Description = "An open complaint account.", Status = ComplaintStatus.Submitted, ReferenceCode = "SEN-OPEN1" },
+            new Complaint { Title = "Resolved", Description = "A resolved complaint account.", Status = ComplaintStatus.Resolved, ReferenceCode = "SEN-RES01" },
+            new Complaint { Title = "Closed", Description = "A closed complaint account.", Status = ComplaintStatus.Closed, ReferenceCode = "SEN-CLS01" });
+        await db.SaveChangesAsync();
+        var service = NewService(db, users, currentUserId: Guid.NewGuid());
+
+        var result = await service.GetQueueAsync(new QueueQuery { OpenOnly = true }, default);
+
+        result.Items.Should().ContainSingle();
+        result.Items.Should().OnlyContain(i =>
+            i.Status == ComplaintStatus.Submitted
+            || i.Status == ComplaintStatus.UnderReview
+            || i.Status == ComplaintStatus.MoreInfoNeeded);
+    }
+
+    [Fact]
+    public async Task Dashboard_counts_reflect_open_unassigned_aging_and_severity()
+    {
+        using var db = NewDb();
+        var users = NewUserManager(db);
+        var me = await SeedUserAsync(db, users, "Dana Field", Sentinel.Core.Roles.Caseworker);
+        var now = DateTime.UtcNow;
+
+        db.Complaints.AddRange(
+            new Complaint { Title = "A", Description = "Open, unassigned, recent, low.", Status = ComplaintStatus.Submitted, Severity = Severity.Low, SubmittedAt = now.AddDays(-1) },
+            new Complaint { Title = "B", Description = "Open, mine, aging, critical.", Status = ComplaintStatus.UnderReview, Severity = Severity.Critical, SubmittedAt = now.AddDays(-40), AssignedToUserId = me.Id, AssignedToName = "Dana Field" },
+            new Complaint { Title = "C", Description = "Awaiting info, mine, high.", Status = ComplaintStatus.MoreInfoNeeded, Severity = Severity.High, SubmittedAt = now.AddDays(-5), AssignedToUserId = me.Id, AssignedToName = "Dana Field" },
+            new Complaint { Title = "D", Description = "Resolved, old, not open.", Status = ComplaintStatus.Resolved, Severity = Severity.Medium, SubmittedAt = now.AddDays(-50) });
+        await db.SaveChangesAsync();
+        var service = NewService(db, users, currentUserId: me.Id);
+
+        var dash = await service.GetDashboardAsync(default);
+
+        dash.Total.Should().Be(4);
+        dash.OpenCount.Should().Be(3);
+        dash.Unassigned.Should().Be(1);
+        dash.AssignedToMeOpen.Should().Be(2);
+        dash.MyAwaitingInfo.Should().Be(1);
+        dash.AgingOpen.Should().Be(1);
+        dash.HighSeverityOpen.Should().Be(2);
+        dash.BySeverity["Critical"].Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Analytics_counts_each_complaint_resolved_in_a_month_once()
+    {
+        using var db = NewDb();
+        var users = NewUserManager(db);
+        var complaint = await SeedComplaintAsync(db);
+        var now = DateTime.UtcNow;
+        db.StatusHistories.AddRange(
+            new StatusHistory { ComplaintId = complaint.Id, FromStatus = ComplaintStatus.UnderReview, ToStatus = ComplaintStatus.Resolved, ChangedAt = now },
+            new StatusHistory { ComplaintId = complaint.Id, FromStatus = ComplaintStatus.UnderReview, ToStatus = ComplaintStatus.Resolved, ChangedAt = now.AddHours(-1) });
+        await db.SaveChangesAsync();
+        var service = NewService(db, users, currentUserId: Guid.NewGuid());
+
+        var analytics = await service.GetAnalyticsAsync(default);
+
+        var thisMonth = analytics.ByMonth.Single(m => m.Month == now.ToString("yyyy-MM"));
+        thisMonth.Resolved.Should().Be(1);
+    }
 }

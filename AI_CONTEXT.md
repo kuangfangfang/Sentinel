@@ -143,6 +143,8 @@ Important coverage includes:
 ## Current State
 
 The current working branch includes:
+- an operational-first caseworker dashboard: personal "My work" and team "Needs attention" signal cards that deep-link into a pre-filtered queue, plus status/severity donuts and a Lodged-vs-Resolved monthly chart
+- queue deep-linking via URL query params and an `OpenOnly` queue filter
 - caseworker complaint assignment (claim / reassign / unassign) with an audited `ComplaintAssigned` event
 - caseworker detail page evidence-file download and inline (non-fatal) action error handling
 - caseworker success feedback banners for status, severity, note, and assignment actions

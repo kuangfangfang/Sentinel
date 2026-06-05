@@ -22,6 +22,8 @@ public class QueueQuery
     public Guid? AssigneeUserId { get; set; }
     /// <summary>When true, show only complaints with no assigned caseworker.</summary>
     public bool? Unassigned { get; set; }
+    /// <summary>When true, show only open complaints (Submitted, UnderReview, MoreInfoNeeded).</summary>
+    public bool? OpenOnly { get; set; }
 }
 
 public record QueueItemDto(
@@ -61,8 +63,10 @@ public record SetSeverityRequest
 }
 
 public record DashboardSummaryDto(
-    int Total, int OpenCount, Dictionary<string, int> ByStatus, Dictionary<string, int> ByGround);
+    int Total, int OpenCount, Dictionary<string, int> ByStatus, Dictionary<string, int> ByGround,
+    Dictionary<string, int> BySeverity,
+    int Unassigned, int AssignedToMeOpen, int MyAwaitingInfo, int AgingOpen, int HighSeverityOpen);
 
 public record CategoryCountDto(string Category, string ShortCategory, int Count);
-public record MonthCountDto(string Month, int Count);
-public record AnalyticsDto(List<CategoryCountDto> ByGround, List<MonthCountDto> ByMonth);
+public record MonthCountDto(string Month, int Lodged, int Resolved);
+public record AnalyticsDto(List<CategoryCountDto> ByGround, List<CategoryCountDto> BySeverity, List<MonthCountDto> ByMonth);

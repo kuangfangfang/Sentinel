@@ -270,6 +270,12 @@ export interface DashboardSummaryDto {
   openCount: number;
   byStatus: Record<string, number>;
   byGround: Record<string, number>;
+  bySeverity: Record<string, number>;
+  unassigned: number;
+  assignedToMeOpen: number;
+  myAwaitingInfo: number;
+  agingOpen: number;
+  highSeverityOpen: number;
 }
 
 export interface CategoryCountDto {
@@ -280,11 +286,13 @@ export interface CategoryCountDto {
 
 export interface MonthCountDto {
   month: string;
-  count: number;
+  lodged: number;
+  resolved: number;
 }
 
 export interface AnalyticsDto {
   byGround: CategoryCountDto[];
+  bySeverity: CategoryCountDto[];
   byMonth: MonthCountDto[];
 }
 
@@ -301,4 +309,5 @@ export interface QueueQuery {
   pageSize?: number;
   assigneeUserId?: string;
   unassigned?: boolean;
+  openOnly?: boolean;
 }

@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## 2026-06-05 — Caseworker dashboard enrichment
+
+### Features
+
+- Reworked the caseworker dashboard into an operational-first workspace: a personal "My work" strip (assigned to me, my cases awaiting info), a team "Needs attention" zone (unassigned, more info needed, high/critical open, aging over 30 days), an overview row, and a "Trends" section.
+- Made every "My work" and "Needs attention" card deep-link into the triage queue with pre-applied filters; `QueuePage` now seeds its initial filters from URL query params (`status`, `severity`, `ground`, `search`, `fromDate`, `toDate`, `assignee=me`, `unassigned`, `openOnly`, `sort`, `dir`), so queue views are shareable.
+- Added status and severity donut charts (badge-matched colours, with `sr-only` tables) and a combined "Lodged vs Resolved by month" chart.
+- Added an `OpenOnly` queue filter (Submitted/UnderReview/MoreInfoNeeded) to the API and queue query.
+
+### Backend
+
+- Extended `DashboardSummaryDto` with `BySeverity`, `Unassigned`, `AssignedToMeOpen`, `MyAwaitingInfo`, `AgingOpen`, and `HighSeverityOpen` (personal counts computed from `ICurrentUser`).
+- Extended `AnalyticsDto` with `BySeverity` and added a per-month `Resolved` count (distinct complaints with a Resolved transition that month, from `StatusHistory`), renaming the monthly `Count` to `Lodged`.
+
+### Verification
+
+- Passed `dotnet test -c Release` (44 tests, including new dashboard-count, open-only, and resolved-per-month coverage).
+- Passed `npm run build` and `npm run test:validation`.
+
 ## 2026-06-05 — Caseworker workspace
 
 ### Features
