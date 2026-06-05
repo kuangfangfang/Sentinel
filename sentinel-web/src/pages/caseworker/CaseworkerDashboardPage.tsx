@@ -50,12 +50,18 @@ export function CaseworkerDashboardPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="card p-5">
           <h2 className="font-semibold text-navy-900">Complaints by category</h2>
-          <div className="mt-4 h-72">
+          <div className="mt-4" style={{ height: Math.max(288, analytics.byGround.length * 34) }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={analytics.byGround} layout="vertical" margin={{ left: 8, right: 16 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                 <XAxis type="number" allowDecimals={false} />
-                <YAxis type="category" dataKey="category" width={140} tick={{ fontSize: 12 }} />
+                <YAxis
+                  type="category"
+                  dataKey="category"
+                  width={180}
+                  interval={0}
+                  tick={<CategoryTick />}
+                />
                 <Tooltip />
                 <Bar dataKey="count" fill="#2563eb" radius={[0, 4, 4, 0]} />
               </BarChart>
@@ -94,5 +100,20 @@ export function CaseworkerDashboardPage() {
         </section>
       </div>
     </div>
+  );
+}
+
+// Long ground labels (e.g. "I have been victimised for making, or trying to make, a
+// complaint") wrap and overlap on a fixed-height axis. Render them on a single line,
+// truncating with an ellipsis; the full label stays available via hover and the tooltip.
+function CategoryTick({ x, y, payload }: { x?: number; y?: number; payload?: { value?: string | number } }) {
+  const full = String(payload?.value ?? '');
+  const maxChars = 26;
+  const text = full.length > maxChars ? `${full.slice(0, maxChars - 1)}\u2026` : full;
+  return (
+    <text x={x} y={y} dy={4} textAnchor="end" fontSize={12} fill="#475569">
+      <title>{full}</title>
+      {text}
+    </text>
   );
 }
