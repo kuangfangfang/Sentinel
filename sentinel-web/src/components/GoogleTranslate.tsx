@@ -11,7 +11,8 @@ import {
 
 const STORAGE_KEY = 'sentinel.translateLanguage';
 const COOKIE_NAME = 'googtrans';
-const MOBILE_SHEET_QUERY = '(max-width: 767px)';
+// Bottom sheet below Tailwind lg — covers phones, tablets, and half-width desktop windows.
+const MOBILE_SHEET_QUERY = '(max-width: 1023px)';
 
 declare global {
   interface Window {

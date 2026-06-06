@@ -47,7 +47,7 @@
   .sentinel-translate-button {
     @apply inline-flex h-10 w-full max-w-full items-center justify-center gap-2 rounded-lg border border-white/25
            bg-white/10 px-3 text-sm font-semibold text-white shadow-sm transition-colors
-           hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:max-w-[15rem];
+           hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:max-w-[12rem] lg:max-w-[15rem];
   }
   .sentinel-translate-backdrop {
     @apply fixed inset-0 z-[100] cursor-default bg-slate-900/50;
@@ -71,7 +71,7 @@
            text-slate-900 placeholder:text-slate-400 focus:border-accent-500;
   }
   .sentinel-translate-list {
-    @apply grid min-h-0 flex-1 grid-cols-1 gap-1 overflow-y-auto p-3 pt-1 md:max-h-[22rem] md:flex-none md:grid-cols-2;
+    @apply grid min-h-0 flex-1 grid-cols-1 gap-1 overflow-y-auto p-3 pt-1 lg:max-h-[22rem] lg:flex-none lg:grid-cols-2;
   }
   .sentinel-translate-option {
     @apply flex min-h-11 w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm font-medium
