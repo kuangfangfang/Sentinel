@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## 2026-06-05 — AWS deployment readiness
+
+### Added
+
+- Root `README.md` with local run, demo accounts, and env-var reference.
+- Health endpoints: `GET /health` (liveness) and `GET /health/ready` (database readiness).
+- Forwarded headers support for reverse proxies (ALB, nginx, Caddy).
+- AWS deployment pack under `deploy/aws/`: Dockerfiles, `docker-compose.yml`, `.env.example`, and step-by-step free-tier guide (Amplify + EC2).
+- `sentinel-web/amplify.yml` for Amplify Hosting builds.
+- Config templates: `appsettings.Production.json.example`, `.env.production.example`.
+- GitHub Actions CI (`.github/workflows/ci.yml`): backend tests + frontend validation/build.
+- Integration tests for health endpoints (`HealthEndpointTests`).
+
+### Verification
+
+- Passed `dotnet test -c Release` (57 tests).
+- Passed `npm run build`.
+
 ## 2026-06-05 — Caseworker breadcrumb navigation
 
 ### Improvements

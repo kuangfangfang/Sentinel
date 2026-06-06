@@ -115,6 +115,26 @@ Common local URLs:
 
 The API CORS allow-list should support both `localhost` and `127.0.0.1` frontend origins.
 
+## Deployment (AWS free tier)
+
+Recommended split for a hosted demo:
+
+- **Frontend:** AWS Amplify Hosting (`sentinel-web/amplify.yml`, env `VITE_API_BASE_URL`)
+- **API:** EC2 `t3.micro` + Docker (`deploy/aws/Dockerfile.api`, persistent `./data` volume for SQLite + evidence)
+
+Key files:
+
+- `README.md` — quick start and env reference
+- `deploy/aws/README.md` — full AWS walkthrough, HTTPS notes, smoke test
+- `deploy/aws/docker-compose.yml` — API (+ optional nginx web) on EC2
+- `Sentinel.Api/appsettings.Production.json.example` — copy to `appsettings.Production.json` or use env vars
+
+Production **requires** `Jwt__SigningKey` and `Cors__AllowedOrigins` matching the hosted frontend URL.
+
+Health checks: `/health`, `/health/ready` (used by Docker healthcheck and load balancers).
+
+CI: `.github/workflows/ci.yml` on push/PR to `main`.
+
 ## Testing Conventions
 
 ### Frontend
@@ -139,6 +159,9 @@ Important coverage includes:
 - status transitions
 - reference code generation
 - CORS configuration
+- auth change-password
+- health endpoints
+- caseworker dashboard/queue parity
 
 ## Current State
 
@@ -165,6 +188,9 @@ The current working branch includes:
 - stronger `notranslate` handling
 - mobile step label improvements
 - favicon support and cleanup of broken punctuation in `index.html`
+- account page (profile + change password) and header user menu
+- collapsible caseworker status history (disclosure pattern)
+- AWS deployment pack and CI workflow
 
 ## Caseworker UX notes
 

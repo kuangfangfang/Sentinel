@@ -2,6 +2,8 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -158,11 +160,22 @@ try
     builder.Services.AddScoped<CaseworkerService>();
     builder.Services.AddScoped<TrackingService>();
 
+    builder.Services.AddHealthChecks()
+        .AddDbContextCheck<SentinelDbContext>("database");
+
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.KnownIPNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
+
     var app = builder.Build();
 
     // ----- Pipeline. Exception handling is first so it wraps everything (SRS 7.2). -----
     app.UseMiddleware<ExceptionHandlingMiddleware>();
     app.UseSerilogRequestLogging();
+    app.UseForwardedHeaders();
 
     if (app.Environment.IsDevelopment())
     {
@@ -177,6 +190,11 @@ try
     app.UseCors(CorsPolicy);
     app.UseAuthentication();
     app.UseAuthorization();
+    app.MapHealthChecks("/health");
+    app.MapHealthChecks("/health/ready", new HealthCheckOptions
+    {
+        Predicate = check => check.Name == "database",
+    });
     app.MapControllers();
 
     // ----- Apply migrations and seed clearly-fictional demo data on startup. -----

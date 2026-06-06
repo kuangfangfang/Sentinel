@@ -14,11 +14,17 @@ obj/
 logs/
 *.log
 
+# AWS deployment env (never commit deploy/aws/.env)
+deploy/aws/.env
+deploy/aws/data/
+
 # Secrets / environment — NEVER commit
 appsettings.Production.json
 .env
 .env.local
 .env.*.local
+!**/.env.example
+!**/.env.production.example
 secrets.json
 
 # Uploaded evidence files (stored outside web root)

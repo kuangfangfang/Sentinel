@@ -1,0 +1,28 @@
+# Sentinel API — container image for AWS EC2 / App Runner / ECS.
+# Build from repo root: docker build -f deploy/aws/Dockerfile.api -t sentinel-api .
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
+WORKDIR /app
+EXPOSE 8080
+ENV ASPNETCORE_URLS=http://+:8080
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY Sentinel.Core/ Sentinel.Core/
+COPY Sentinel.Data/ Sentinel.Data/
+COPY Sentinel.Api/ Sentinel.Api/
+RUN dotnet restore Sentinel.Api/Sentinel.Api.csproj
+RUN dotnet publish Sentinel.Api/Sentinel.Api.csproj -c Release -o /app/publish /p:UseAppHost=false
+
+FROM base AS final
+WORKDIR /app
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=build /app/publish .
+RUN mkdir -p /data/uploaded-evidence
+VOLUME ["/data"]
+ENV ASPNETCORE_ENVIRONMENT=Production \
+    ConnectionStrings__Sqlite=Data Source=/data/sentinel.db \
+    FileStorage__Root=/data/uploaded-evidence
+ENTRYPOINT ["dotnet", "Sentinel.Api.dll"]
