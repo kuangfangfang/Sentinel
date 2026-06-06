@@ -94,6 +94,11 @@ The site uses a custom Google Translate menu instead of the default widget UI. T
 
 All users are gated by a session-scoped demo disclaimer before using the site.
 
+### Seeding and accounts
+
+- **Development:** `appsettings.Development.json` enables fictional demo users and sample complaints (`Seed:EnableDemoData`). Credentials are not shown on the login page.
+- **Production:** No demo users or sample complaints. Set `Seed__BootstrapCaseworkerEmail` and `Seed__BootstrapCaseworkerPassword` (env var or `deploy/aws/.env`) to create the first caseworker once. Complainants self-register via `/register`.
+
 ## Local Development
 
 ### Frontend

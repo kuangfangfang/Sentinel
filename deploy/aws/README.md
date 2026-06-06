@@ -59,7 +59,7 @@ sudo usermod -aG docker ec2-user
 git clone <your-repo-url> sentinel
 cd sentinel/deploy/aws
 cp .env.example .env
-nano .env   # set JWT_SIGNING_KEY, FRONTEND_ORIGIN, VITE_API_BASE_URL
+nano .env   # set JWT_SIGNING_KEY, FRONTEND_ORIGIN, VITE_API_BASE_URL, bootstrap caseworker
 mkdir -p data
 chmod 700 data
 ```
@@ -76,7 +76,12 @@ Set in `.env`:
 JWT_SIGNING_KEY=<paste-generated-key>
 FRONTEND_ORIGIN=https://main.xxxxx.amplifyapp.com
 VITE_API_BASE_URL=http://<EC2_PUBLIC_DNS>:8080/api
+SEED_BOOTSTRAP_CASEWORKER_EMAIL=admin@your-domain.example
+SEED_BOOTSTRAP_CASEWORKER_PASSWORD=<strong-password>
+SEED_BOOTSTRAP_CASEWORKER_FULL_NAME=Sentinel Admin
 ```
+
+The API creates the bootstrap caseworker **once** on first startup if that email does not exist. Demo sample complaints are **not** seeded in Production.
 
 ### 4. Start API only (Amplify frontend)
 

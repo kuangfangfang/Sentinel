@@ -7,22 +7,16 @@ using Sentinel.Core.Enums;
 namespace Sentinel.Data;
 
 /// <summary>
-/// Inserts clearly fictional seed data (SRS build-safety note): the two roles,
-/// one caseworker and one complainant demo account, the public resources
-/// directory, and a few sample complaints. Idempotent — safe to run on every start.
+/// Inserts roles, the public resources directory, and optional demo or bootstrap data.
+/// Idempotent — safe to run on every start.
 /// </summary>
 public static class DbSeeder
 {
-    // Demo credentials. These are obviously non-real and exist only for local demonstration.
-    public const string CaseworkerEmail = "caseworker@sentinel.local";
-    public const string CaseworkerPassword = "Caseworker#2026";
-    public const string ComplainantEmail = "complainant@sentinel.local";
-    public const string ComplainantPassword = "Complainant#2026";
-
     public static async Task SeedAsync(
         SentinelDbContext db,
         UserManager<ApplicationUser> userManager,
-        RoleManager<IdentityRole<Guid>> roleManager)
+        RoleManager<IdentityRole<Guid>> roleManager,
+        SeedOptions options)
     {
         await db.Database.MigrateAsync();
 
@@ -32,26 +26,71 @@ public static class DbSeeder
                 await roleManager.CreateAsync(new IdentityRole<Guid>(role) { Id = Guid.NewGuid() });
         }
 
-        var caseworker = await EnsureUserAsync(userManager, CaseworkerEmail, "Dana Field (Caseworker)", CaseworkerPassword, Roles.Caseworker);
-        var complainant = await EnsureUserAsync(userManager, ComplainantEmail, "Sam Rivers", ComplainantPassword, Roles.Complainant);
+        await SeedResourceLinksAsync(db);
 
-        if (!await db.ResourceLinks.AnyAsync())
+        if (options.EnableDemoData && HasDemoCredentials(options))
         {
-            db.ResourceLinks.AddRange(
-                new ResourceLink { Category = "Emergency", Name = "Emergency (Police/Fire/Ambulance)", PhoneNumber = "000", Description = "If you are in immediate danger, call 000.", DisplayOrder = 1 },
-                new ResourceLink { Category = "Crisis support", Name = "Lifeline", PhoneNumber = "13 11 14", Url = "https://www.lifeline.org.au", Description = "24-hour crisis support and suicide prevention.", DisplayOrder = 2 },
-                new ResourceLink { Category = "Crisis support", Name = "1800RESPECT", PhoneNumber = "1800 737 732", Url = "https://www.1800respect.org.au", Description = "National domestic, family and sexual violence counselling.", DisplayOrder = 3 },
-                new ResourceLink { Category = "Legal aid", Name = "National Legal Aid", Url = "https://www.nationallegalaid.org", Description = "Find free or low-cost legal help in your state or territory.", DisplayOrder = 4 },
-                new ResourceLink { Category = "Advocacy", Name = "Disability Advocacy Finder", Url = "https://disabilityadvocacyfinder.dss.gov.au", Description = "Locate a disability advocate near you.", DisplayOrder = 5 },
-                new ResourceLink { Category = "Interpreting", Name = "Translating and Interpreting Service (TIS)", PhoneNumber = "131 450", Url = "https://www.tisnational.gov.au", Description = "Free interpreting for people who do not speak English.", DisplayOrder = 6 }
-            );
-            await db.SaveChangesAsync();
+            var caseworker = await EnsureUserAsync(
+                userManager,
+                options.DemoCaseworkerEmail!,
+                "Dana Field (Caseworker)",
+                options.DemoCaseworkerPassword!,
+                Roles.Caseworker);
+            var complainant = await EnsureUserAsync(
+                userManager,
+                options.DemoComplainantEmail!,
+                "Sam Rivers",
+                options.DemoComplainantPassword!,
+                Roles.Complainant);
+            await SeedDemoComplaintsAsync(db, caseworker, complainant);
+            return;
         }
 
+        if (HasBootstrapCaseworker(options))
+        {
+            await EnsureUserAsync(
+                userManager,
+                options.BootstrapCaseworkerEmail!,
+                options.BootstrapCaseworkerFullName ?? "Sentinel Caseworker",
+                options.BootstrapCaseworkerPassword!,
+                Roles.Caseworker);
+        }
+    }
+
+    private static bool HasDemoCredentials(SeedOptions options) =>
+        !string.IsNullOrWhiteSpace(options.DemoCaseworkerEmail)
+        && !string.IsNullOrWhiteSpace(options.DemoCaseworkerPassword)
+        && !string.IsNullOrWhiteSpace(options.DemoComplainantEmail)
+        && !string.IsNullOrWhiteSpace(options.DemoComplainantPassword);
+
+    private static bool HasBootstrapCaseworker(SeedOptions options) =>
+        !string.IsNullOrWhiteSpace(options.BootstrapCaseworkerEmail)
+        && !string.IsNullOrWhiteSpace(options.BootstrapCaseworkerPassword);
+
+    private static async Task SeedResourceLinksAsync(SentinelDbContext db)
+    {
+        if (await db.ResourceLinks.AnyAsync())
+            return;
+
+        db.ResourceLinks.AddRange(
+            new ResourceLink { Category = "Emergency", Name = "Emergency (Police/Fire/Ambulance)", PhoneNumber = "000", Description = "If you are in immediate danger, call 000.", DisplayOrder = 1 },
+            new ResourceLink { Category = "Crisis support", Name = "Lifeline", PhoneNumber = "13 11 14", Url = "https://www.lifeline.org.au", Description = "24-hour crisis support and suicide prevention.", DisplayOrder = 2 },
+            new ResourceLink { Category = "Crisis support", Name = "1800RESPECT", PhoneNumber = "1800 737 732", Url = "https://www.1800respect.org.au", Description = "National domestic, family and sexual violence counselling.", DisplayOrder = 3 },
+            new ResourceLink { Category = "Legal aid", Name = "National Legal Aid", Url = "https://www.nationallegalaid.org", Description = "Find free or low-cost legal help in your state or territory.", DisplayOrder = 4 },
+            new ResourceLink { Category = "Advocacy", Name = "Disability Advocacy Finder", Url = "https://disabilityadvocacyfinder.dss.gov.au", Description = "Locate a disability advocate near you.", DisplayOrder = 5 },
+            new ResourceLink { Category = "Interpreting", Name = "Translating and Interpreting Service (TIS)", PhoneNumber = "131 450", Url = "https://www.tisnational.gov.au", Description = "Free interpreting for people who do not speak English.", DisplayOrder = 6 }
+        );
+        await db.SaveChangesAsync();
+    }
+
+    private static async Task SeedDemoComplaintsAsync(
+        SentinelDbContext db,
+        ApplicationUser caseworker,
+        ApplicationUser complainant)
+    {
         // Seed complaints by demo key rather than only when the table is empty, so
         // new demo cases appear in existing local databases without duplicating old ones.
-        {
-            var now = DateTime.UtcNow;
+        var now = DateTime.UtcNow;
 
             // 1. A submitted complaint owned by the demo complainant.
             var c1 = new Complaint
@@ -482,11 +521,10 @@ public static class DbSeeder
                 .Where(c => !existingDemoKeys.Contains(c.ReferenceCode ?? c.Title))
                 .ToList();
 
-            if (missingComplaints.Count > 0)
-            {
-                db.Complaints.AddRange(missingComplaints);
-                await db.SaveChangesAsync();
-            }
+        if (missingComplaints.Count > 0)
+        {
+            db.Complaints.AddRange(missingComplaints);
+            await db.SaveChangesAsync();
         }
     }
 

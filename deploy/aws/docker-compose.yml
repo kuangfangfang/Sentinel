@@ -20,6 +20,9 @@ services:
       FileStorage__Root: /data/uploaded-evidence
       Jwt__SigningKey: ${JWT_SIGNING_KEY}
       Cors__AllowedOrigins__0: ${FRONTEND_ORIGIN}
+      Seed__BootstrapCaseworkerEmail: ${SEED_BOOTSTRAP_CASEWORKER_EMAIL}
+      Seed__BootstrapCaseworkerPassword: ${SEED_BOOTSTRAP_CASEWORKER_PASSWORD}
+      Seed__BootstrapCaseworkerFullName: ${SEED_BOOTSTRAP_CASEWORKER_FULL_NAME:-Sentinel Admin}
     volumes:
       - ./data:/data
     healthcheck:

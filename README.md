@@ -40,12 +40,16 @@ npm run dev
 
 App: `http://localhost:5174` (see `vite.config.ts` for the port)
 
-### Demo accounts (seeded on first API start)
+### Local demo accounts
 
-| Role | Email | Password |
-|------|-------|----------|
-| Caseworker | `caseworker@sentinel.local` | `Caseworker#2026` |
-| Complainant | `complainant@sentinel.local` | `Complainant#2026` |
+Demo users and sample complaints are seeded **only in Development** via `Sentinel.Api/appsettings.Development.json` (`Seed:EnableDemoData`). They are **not** shown on the login page and are **not** used in Production.
+
+| Role | Email | Password (Development only) |
+|------|-------|----------------------------|
+| Caseworker | `caseworker@sentinel.local` | see `appsettings.Development.json` |
+| Complainant | `complainant@sentinel.local` | see `appsettings.Development.json` |
+
+Complainants can also self-register at `/register`. Caseworkers cannot self-register.
 
 ## Tests
 
@@ -75,6 +79,9 @@ Required environment variables (Production):
 | `VITE_API_BASE_URL` | `https://api.example.com/api` (build-time) |
 | `ConnectionStrings__Sqlite` | `Data Source=/data/sentinel.db` |
 | `FileStorage__Root` | `/data/uploaded-evidence` |
+| `Seed__BootstrapCaseworkerEmail` | Admin caseworker email (created once) |
+| `Seed__BootstrapCaseworkerPassword` | Strong password for bootstrap caseworker |
+| `Seed__BootstrapCaseworkerFullName` | Display name (optional) |
 
 ## AWS deployment (free tier)
 

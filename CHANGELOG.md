@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 2026-06-05 — Production-safe seeding (no public demo credentials)
+
+### Security
+
+- Removed demo account/password box from the login page.
+- Removed hardcoded demo credentials from `DbSeeder.cs`.
+- **Development:** demo users and sample complaints via `Seed:EnableDemoData` in `appsettings.Development.json` only.
+- **Production:** optional bootstrap caseworker via `Seed__BootstrapCaseworkerEmail` / `Seed__BootstrapCaseworkerPassword` (documented in README and `deploy/aws/.env.example`).
+
+### Verification
+
+- Passed `dotnet test -c Release`.
+- Passed `npm run build`.
+
 ## 2026-06-05 — AWS deployment readiness
 
 ### Added

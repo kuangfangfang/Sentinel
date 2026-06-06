@@ -206,7 +206,8 @@ try
             var db = services.GetRequiredService<SentinelDbContext>();
             var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
             var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
-            await DbSeeder.SeedAsync(db, userManager, roleManager);
+            var seedOptions = configuration.GetSection("Seed").Get<SeedOptions>() ?? new SeedOptions();
+            await DbSeeder.SeedAsync(db, userManager, roleManager, seedOptions);
         }
         catch (Exception ex)
         {

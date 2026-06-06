@@ -88,12 +88,6 @@ export function LoginPage() {
           </Link>
         </p>
       </form>
-
-      <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-        <p className="font-medium text-navy-900">Demo accounts</p>
-        <p className="mt-1">Complainant: <code>complainant@sentinel.local</code> / <code>Complainant#2026</code></p>
-        <p>Caseworker: <code>caseworker@sentinel.local</code> / <code>Caseworker#2026</code></p>
-      </div>
     </div>
   );
 }

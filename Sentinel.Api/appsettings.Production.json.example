@@ -26,5 +26,11 @@
     "Root": "/data/uploaded-evidence",
     "MaxFileBytes": 10485760,
     "MaxFilesPerComplaint": 10
+  },
+  "Seed": {
+    "EnableDemoData": false,
+    "BootstrapCaseworkerEmail": "SET_VIA_Seed__BootstrapCaseworkerEmail",
+    "BootstrapCaseworkerPassword": "SET_VIA_Seed__BootstrapCaseworkerPassword",
+    "BootstrapCaseworkerFullName": "Sentinel Caseworker"
   }
 }
