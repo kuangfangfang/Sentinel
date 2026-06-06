@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { createPortal } from 'react-dom';
 import {
   DEFAULT_TRANSLATE_LANGUAGE,
   SOURCE_PAGE_LANGUAGE,
@@ -10,6 +11,7 @@ import {
 
 const STORAGE_KEY = 'sentinel.translateLanguage';
 const COOKIE_NAME = 'googtrans';
+const MOBILE_SHEET_QUERY = '(max-width: 767px)';
 
 declare global {
   interface Window {
@@ -65,11 +67,83 @@ function hideInjectedGoogleTranslateControls() {
     });
 }
 
+type LanguageMenuProps = {
+  searchRef: RefObject<HTMLInputElement>;
+  query: string;
+  onQueryChange: (value: string) => void;
+  filteredLanguages: ReturnType<typeof searchTranslateLanguages>;
+  currentLanguage: string;
+  onSelectLanguage: (languageCode: string) => void;
+  variant: 'dropdown' | 'sheet';
+};
+
+function LanguageMenu({
+  searchRef,
+  query,
+  onQueryChange,
+  filteredLanguages,
+  currentLanguage,
+  onSelectLanguage,
+  variant,
+}: LanguageMenuProps) {
+  const menuClass = variant === 'sheet' ? 'sentinel-translate-menu-sheet' : 'sentinel-translate-menu';
+
+  return (
+    <div className={menuClass} role="dialog" aria-label="Language selector" aria-modal={variant === 'sheet'}>
+      {variant === 'sheet' && (
+        <>
+          <div className="sentinel-translate-sheet-handle" aria-hidden="true" />
+          <p className="sentinel-translate-sheet-title">Select language</p>
+        </>
+      )}
+      <input
+        ref={searchRef}
+        type="search"
+        className="sentinel-translate-search"
+        placeholder="Search languages"
+        value={query}
+        onChange={(event) => onQueryChange(event.target.value)}
+      />
+      <div className="sentinel-translate-list" role="listbox" aria-label="Available languages">
+        {filteredLanguages.length === 0 ? (
+          <p className="px-4 py-6 text-center text-sm text-slate-500">No languages found</p>
+        ) : (
+          filteredLanguages.map((language) => {
+            const isSelected = language.value === currentLanguage;
+            return (
+              <button
+                key={language.value}
+                type="button"
+                className={`sentinel-translate-option ${isSelected ? 'sentinel-translate-option-active' : ''}`}
+                role="option"
+                aria-selected={isSelected}
+                onClick={() => onSelectLanguage(language.value)}
+              >
+                <span className="min-w-0 truncate">{language.label}</span>
+                {isSelected && (
+                  <svg className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path
+                      fillRule="evenodd"
+                      d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.25 7.31a1 1 0 0 1-1.42 0L4.29 10.23a1 1 0 1 1 1.42-1.41l3.04 3.064 6.54-6.588a1 1 0 0 1 1.414-.006z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                )}
+              </button>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function GoogleTranslate() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [currentLanguage, setCurrentLanguage] = useState(DEFAULT_TRANSLATE_LANGUAGE);
   const [scriptReady, setScriptReady] = useState(false);
+  const [useMobileSheet, setUseMobileSheet] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const elementIdRef = useRef(`google_translate_element_${Math.random().toString(36).slice(2, 9)}`);
@@ -80,6 +154,23 @@ export function GoogleTranslate() {
   useEffect(() => {
     setCurrentLanguage(restoreSavedLanguage());
   }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(MOBILE_SHEET_QUERY);
+    const syncLayout = () => setUseMobileSheet(mediaQuery.matches);
+    syncLayout();
+    mediaQuery.addEventListener('change', syncLayout);
+    return () => mediaQuery.removeEventListener('change', syncLayout);
+  }, []);
+
+  useEffect(() => {
+    if (!open || !useMobileSheet) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open, useMobileSheet]);
 
   useEffect(() => {
     function initialiseWidget() {
@@ -141,6 +232,7 @@ export function GoogleTranslate() {
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent | TouchEvent) {
+      if (useMobileSheet) return;
       if (event.target instanceof Node && !rootRef.current?.contains(event.target)) {
         setOpen(false);
       }
@@ -159,7 +251,7 @@ export function GoogleTranslate() {
       document.removeEventListener('touchstart', handlePointerDown);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [useMobileSheet]);
 
   useEffect(() => {
     if (open) {
@@ -187,6 +279,35 @@ export function GoogleTranslate() {
     window.location.reload();
   }
 
+  const languageMenu = (
+    <LanguageMenu
+      searchRef={searchRef}
+      query={query}
+      onQueryChange={setQuery}
+      filteredLanguages={filteredLanguages}
+      currentLanguage={currentLanguage}
+      onSelectLanguage={changeLanguage}
+      variant={useMobileSheet ? 'sheet' : 'dropdown'}
+    />
+  );
+
+  const mobileSheetPortal =
+    open && useMobileSheet
+      ? createPortal(
+          <>
+            <button
+              type="button"
+              className="sentinel-translate-backdrop notranslate"
+              translate="no"
+              aria-label="Close language selector"
+              onClick={() => setOpen(false)}
+            />
+            {languageMenu}
+          </>,
+          document.body,
+        )
+      : null;
+
   return (
     <div ref={rootRef} className="sentinel-google-translate notranslate" translate="no">
       <div id={elementIdRef.current} className="hidden" aria-hidden="true" />
@@ -210,44 +331,8 @@ export function GoogleTranslate() {
         </svg>
       </button>
 
-      {open && (
-        <div className="sentinel-translate-menu" role="dialog" aria-label="Language selector">
-          <input
-            ref={searchRef}
-            type="search"
-            className="sentinel-translate-search"
-            placeholder="Search languages"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-          />
-          <div className="sentinel-translate-list" role="listbox" aria-label="Available languages">
-            {filteredLanguages.length === 0 ? (
-              <p className="px-4 py-6 text-center text-sm text-slate-500">No languages found</p>
-            ) : (
-              filteredLanguages.map((language) => {
-                const isSelected = language.value === currentLanguage;
-                return (
-                  <button
-                    key={language.value}
-                    type="button"
-                    className={`sentinel-translate-option ${isSelected ? 'sentinel-translate-option-active' : ''}`}
-                    role="option"
-                    aria-selected={isSelected}
-                    onClick={() => changeLanguage(language.value)}
-                  >
-                    <span className="min-w-0 truncate">{language.label}</span>
-                    {isSelected && (
-                      <svg className="h-4 w-4 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path fillRule="evenodd" d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.25 7.31a1 1 0 0 1-1.42 0L4.29 10.23a1 1 0 1 1 1.42-1.41l3.04 3.064 6.54-6.588a1 1 0 0 1 1.414-.006z" clipRule="evenodd" />
-                      </svg>
-                    )}
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
-      )}
+      {open && !useMobileSheet && languageMenu}
+      {mobileSheetPortal}
     </div>
   );
 }

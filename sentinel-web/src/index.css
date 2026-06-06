@@ -49,16 +49,29 @@
            bg-white/10 px-3 text-sm font-semibold text-white shadow-sm transition-colors
            hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:max-w-[15rem];
   }
+  .sentinel-translate-backdrop {
+    @apply fixed inset-0 z-[100] cursor-default bg-slate-900/50;
+  }
   .sentinel-translate-menu {
-    @apply absolute right-0 top-full mt-2 w-[min(calc(100vw-2rem),32rem)] overflow-hidden rounded-lg border border-slate-200
-           bg-white text-slate-900 shadow-2xl;
+    @apply absolute right-0 top-full z-50 mt-2 w-[min(calc(100vw-2rem),32rem)] overflow-hidden rounded-lg border
+           border-slate-200 bg-white text-slate-900 shadow-2xl;
+  }
+  .sentinel-translate-menu-sheet {
+    @apply fixed inset-x-0 bottom-0 z-[101] flex max-h-[min(85vh,28rem)] flex-col overflow-hidden rounded-t-2xl border-t
+           border-slate-200 bg-white text-slate-900 shadow-2xl;
+  }
+  .sentinel-translate-sheet-handle {
+    @apply mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full bg-slate-300;
+  }
+  .sentinel-translate-sheet-title {
+    @apply px-4 pb-1 pt-2 text-base font-semibold text-navy-900;
   }
   .sentinel-translate-search {
-    @apply m-3 mb-2 w-[calc(100%-1.5rem)] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900
-           placeholder:text-slate-400 focus:border-accent-500;
+    @apply mx-3 mb-2 mt-2 w-[calc(100%-1.5rem)] shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm
+           text-slate-900 placeholder:text-slate-400 focus:border-accent-500;
   }
   .sentinel-translate-list {
-    @apply grid max-h-[22rem] grid-cols-1 gap-1 overflow-y-auto p-3 pt-1 sm:grid-cols-2;
+    @apply grid min-h-0 flex-1 grid-cols-1 gap-1 overflow-y-auto p-3 pt-1 md:max-h-[22rem] md:flex-none md:grid-cols-2;
   }
   .sentinel-translate-option {
     @apply flex min-h-11 w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm font-medium
