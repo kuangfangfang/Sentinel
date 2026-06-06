@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 2026-06-06 — Automated EC2 deploy via GitHub Actions
+
+### Added
+
+- `deploy/aws/deploy.sh` — remote deploy script (`git reset --hard origin/main`, `docker-compose up -d --build`, health wait).
+- `.github/workflows/deploy-ec2.yml` — deploys after CI passes on `main`, or manual workflow dispatch.
+- Deploy guide: GitHub Actions secrets and security-group notes in `deploy/aws/README.md`.
+
 ## 2026-06-05 — Production-safe seeding (no public demo credentials)
 
 ### Security

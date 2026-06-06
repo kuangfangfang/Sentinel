@@ -217,6 +217,57 @@ Use `/health/ready` for load balancer or Docker health checks.
 
 ---
 
+## Automated deploy (GitHub Actions)
+
+After a one-time setup, every **successful CI run on `main`** triggers an SSH deploy to EC2 (`git pull` + `docker-compose up -d --build`). You can also run **Deploy EC2** manually from the Actions tab.
+
+### One-time setup
+
+1. **EC2 security group — SSH:** GitHub Actions runners use changing public IPs. For automated deploy, open port **22** to **0.0.0.0/0** (rely on your `.pem` / deploy key; remove when not needed), or run deploys manually only.
+
+2. **GitHub repository secrets** (Settings → Secrets and variables → Actions):
+
+| Secret | Example | Required |
+|--------|---------|----------|
+| `EC2_HOST` | `15.134.86.18` | Yes |
+| `EC2_USER` | `ec2-user` (Amazon Linux) or `ubuntu` | Yes |
+| `EC2_SSH_KEY` | Full contents of your `.pem` private key | Yes |
+| `EC2_GIT_PAT` | Fine-grained PAT with **Contents: Read** on this repo | Yes for **private** repos |
+| `EC2_SSH_PORT` | `22` | Optional |
+
+To copy `.pem` into the secret (PowerShell):
+
+```powershell
+Get-Content "C:\Users\You\.ssh\sentinel.pem" -Raw
+```
+
+Paste the entire output (including `-----BEGIN` / `-----END` lines) into `EC2_SSH_KEY`.
+
+3. **First deploy on the server** must already be done manually (`git clone`, `.env`, `data/`). Automation only **updates** an existing install.
+
+### What runs on deploy
+
+`deploy/aws/deploy.sh` on the EC2 host:
+
+- `git fetch` + `git reset --hard origin/main`
+- `docker-compose up -d --build`
+- waits for `GET /health/ready`
+
+Manual equivalent on EC2:
+
+```bash
+bash ~/sentinel/deploy/aws/deploy.sh
+```
+
+### Workflows
+
+| Workflow | When |
+|----------|------|
+| `CI` | Every push/PR to `main` — tests + frontend build |
+| `Deploy EC2` | After CI succeeds on `main`, or manual **Run workflow** |
+
+---
+
 ## CI
 
 GitHub Actions workflow `.github/workflows/ci.yml` runs backend tests and frontend build on push.

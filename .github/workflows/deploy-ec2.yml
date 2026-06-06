@@ -1,0 +1,37 @@
+# Deploy to EC2 after CI passes on main, or manually via "Run workflow".
+# Requires GitHub repository secrets — see deploy/aws/README.md § Automated deploy.
+
+name: Deploy EC2
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-ec2
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_SSH_PORT || 22 }}
+          command_timeout: 30m
+          envs: GITHUB_PAT
+          script_stop: true
+          script: |
+            bash ~/sentinel/deploy/aws/deploy.sh
+        env:
+          GITHUB_PAT: ${{ secrets.EC2_GIT_PAT }}
