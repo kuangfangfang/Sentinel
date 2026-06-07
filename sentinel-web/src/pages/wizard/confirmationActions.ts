@@ -23,6 +23,7 @@ export function buildReferenceCodeText(referenceCode: string, _isAnonymous: bool
 
 export interface ClipboardCopyEnvironment {
   clipboard?: Pick<Clipboard, 'writeText'> | null;
+  canUseClipboardApi?: boolean;
   fallbackCopy?: (text: string) => boolean;
 }
 
@@ -31,7 +32,7 @@ export async function copyTextToClipboard(
   environment: ClipboardCopyEnvironment = getBrowserClipboardEnvironment(),
 ): Promise<boolean> {
   try {
-    if (environment.clipboard?.writeText) {
+    if (environment.canUseClipboardApi !== false && environment.clipboard?.writeText) {
       await environment.clipboard.writeText(text);
       return true;
     }
@@ -158,6 +159,7 @@ function hasValue(row: ConfirmationSummaryRow): boolean {
 function getBrowserClipboardEnvironment(): ClipboardCopyEnvironment {
   return {
     clipboard: typeof navigator === 'undefined' ? null : navigator.clipboard,
+    canUseClipboardApi: typeof window === 'undefined' ? false : window.isSecureContext,
     fallbackCopy: copyTextWithSelectionFallback,
   };
 }

@@ -41,6 +41,26 @@ async function runClipboardCopyChecks() {
 
   {
     let fallbackText = '';
+    let clipboardCalled = false;
+    const copied = await copyTextToClipboard('SEN-2026-ABC123', {
+      canUseClipboardApi: false,
+      clipboard: {
+        writeText: async () => {
+          clipboardCalled = true;
+        },
+      },
+      fallbackCopy: (text) => {
+        fallbackText = text;
+        return true;
+      },
+    });
+    assert(copied, 'copy helper uses fallback directly in insecure browser contexts');
+    assert(!clipboardCalled, 'copy helper does not call Clipboard API when the browser context is insecure');
+    assert(fallbackText === 'SEN-2026-ABC123', 'copy helper passes the reference code to the insecure-context fallback path');
+  }
+
+  {
+    let fallbackText = '';
     const copied = await copyTextToClipboard('SEN-2026-ABC123', {
       clipboard: {
         writeText: async () => {
