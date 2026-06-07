@@ -13,6 +13,7 @@ import {
 import {
   buildReferenceCodeText,
   buildComplaintSummarySections,
+  copyTextToClipboard,
 } from '../src/pages/wizard/confirmationActions';
 import {
   beginManualQueueScrollRestoration,
@@ -21,6 +22,47 @@ import type { ComplaintWriteDto, GroundDto } from '../src/types';
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
+}
+
+async function runClipboardCopyChecks() {
+  {
+    let copiedText = '';
+    const copied = await copyTextToClipboard('SEN-2026-ABC123', {
+      clipboard: {
+        writeText: async (text) => {
+          copiedText = text;
+        },
+      },
+      fallbackCopy: () => false,
+    });
+    assert(copied, 'copy helper succeeds when Clipboard API writes successfully');
+    assert(copiedText === 'SEN-2026-ABC123', 'copy helper writes the reference code to the Clipboard API');
+  }
+
+  {
+    let fallbackText = '';
+    const copied = await copyTextToClipboard('SEN-2026-ABC123', {
+      clipboard: {
+        writeText: async () => {
+          throw new Error('Clipboard unavailable');
+        },
+      },
+      fallbackCopy: (text) => {
+        fallbackText = text;
+        return true;
+      },
+    });
+    assert(copied, 'copy helper falls back when Clipboard API fails');
+    assert(fallbackText === 'SEN-2026-ABC123', 'copy helper passes the reference code to the fallback copy path');
+  }
+
+  {
+    const copied = await copyTextToClipboard('SEN-2026-ABC123', {
+      clipboard: null,
+      fallbackCopy: () => false,
+    });
+    assert(!copied, 'copy helper reports failure when no copy strategy succeeds');
+  }
 }
 
 const suburbs: AustralianSuburbLike[] = [
@@ -155,4 +197,11 @@ const complaint: ComplaintWriteDto = {
   assert(currentScrollRestoration() === 'auto', 'queue return handling restores after the final manual scroll user leaves');
 }
 
-console.log('wizard UX checks passed');
+runClipboardCopyChecks()
+  .then(() => {
+    console.log('wizard UX checks passed');
+  })
+  .catch((error) => {
+    console.error(error);
+    throw error;
+  });

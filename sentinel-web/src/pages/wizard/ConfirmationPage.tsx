@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   buildReferenceCodeText,
+  copyTextToClipboard,
   type ConfirmationComplaintSummary,
 } from './confirmationActions';
 import { formatDateTime } from '../../utils/format';
@@ -18,7 +19,7 @@ export function ConfirmationPage() {
   const location = useLocation();
   const { isAuthenticated } = useAuth();
   const state = location.state as ConfirmationState | null;
-  const [copied, setCopied] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
 
   if (!state?.referenceCode) return <Navigate to="/" replace />;
 
@@ -40,13 +41,9 @@ export function ConfirmationPage() {
   async function copyReferenceCode() {
     if (!state?.referenceCode) return;
     const text = buildReferenceCodeText(state.referenceCode, Boolean(state.isAnonymous));
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2500);
-    } catch {
-      setCopied(false);
-    }
+    const copied = await copyTextToClipboard(text);
+    setCopyStatus(copied ? 'copied' : 'failed');
+    window.setTimeout(() => setCopyStatus('idle'), 2500);
   }
 
   return (
@@ -71,12 +68,17 @@ export function ConfirmationPage() {
         )}
         <div className="mt-5 flex flex-col justify-center gap-3 sm:flex-row print:hidden">
           <button type="button" className="btn-secondary" onClick={copyReferenceCode}>
-            {copied ? 'Copied' : 'Copy code'}
+            {copyStatus === 'copied' ? 'Copied' : 'Copy code'}
           </button>
           <button type="button" className="btn-secondary" onClick={() => window.print()}>
             Print / save summary
           </button>
         </div>
+        {copyStatus === 'failed' && (
+          <p className="mt-3 text-sm text-red-700" role="alert">
+            Could not copy automatically. Select the reference code and copy it manually.
+          </p>
+        )}
       </div>
 
       {state.complaintSummary?.sections.length ? (

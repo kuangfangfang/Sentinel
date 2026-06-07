@@ -21,6 +21,27 @@ export function buildReferenceCodeText(referenceCode: string, _isAnonymous: bool
   return referenceCode;
 }
 
+export interface ClipboardCopyEnvironment {
+  clipboard?: Pick<Clipboard, 'writeText'> | null;
+  fallbackCopy?: (text: string) => boolean;
+}
+
+export async function copyTextToClipboard(
+  text: string,
+  environment: ClipboardCopyEnvironment = getBrowserClipboardEnvironment(),
+): Promise<boolean> {
+  try {
+    if (environment.clipboard?.writeText) {
+      await environment.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // Fall back below for HTTP deployments or browsers that deny Clipboard API access.
+  }
+
+  return environment.fallbackCopy?.(text) ?? false;
+}
+
 export function buildComplaintSummarySections(
   complaint: ComplaintWriteDto,
   groundsCatalog: GroundDto[],
@@ -132,4 +153,34 @@ function row(
 
 function hasValue(row: ConfirmationSummaryRow): boolean {
   return row.value.length > 0 && row.value !== '-';
+}
+
+function getBrowserClipboardEnvironment(): ClipboardCopyEnvironment {
+  return {
+    clipboard: typeof navigator === 'undefined' ? null : navigator.clipboard,
+    fallbackCopy: copyTextWithSelectionFallback,
+  };
+}
+
+function copyTextWithSelectionFallback(text: string): boolean {
+  if (typeof document === 'undefined') return false;
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.left = '-9999px';
+  textarea.style.top = '0';
+
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+
+  try {
+    return document.execCommand('copy');
+  } catch {
+    return false;
+  } finally {
+    document.body.removeChild(textarea);
+  }
 }
