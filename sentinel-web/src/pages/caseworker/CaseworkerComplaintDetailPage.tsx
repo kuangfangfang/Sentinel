@@ -15,7 +15,7 @@ import { StatusTimeline } from '../../components/StatusTimeline';
 import { formatDateOnly, formatDateTime } from '../../utils/format';
 import { allowedNextStatuses } from '../../utils/statusTransitions';
 import { caseNoteSchema, statusChangeSchema } from '../../validation/schemas';
-import { readQueueReturnState, peekQueueSearch } from './queueNavigation';
+import { beginManualQueueScrollRestoration, readQueueReturnState, peekQueueSearch } from './queueNavigation';
 
 const SEVERITIES: Severity[] = ['Low', 'Medium', 'High', 'Critical'];
 type CaseNoteFormData = z.infer<typeof caseNoteSchema>;
@@ -49,6 +49,8 @@ export function CaseworkerComplaintDetailPage() {
   });
   const noteBody = noteForm.watch('body');
   const statusTarget = statusForm.watch('statusTarget');
+
+  useEffect(() => beginManualQueueScrollRestoration(), []);
 
   useEffect(() => {
     if (!id) return;

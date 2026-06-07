@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Link, useLocation, useNavigationType, useSearchParams } from 'react-router-dom';
 import {
+  beginManualQueueScrollRestoration,
   buildQueueOpenState,
   clearQueueReturn,
   findVisibleQueueItem,
@@ -49,6 +50,8 @@ export function QueuePage() {
     defaultValues: parseInitialFilters(searchParams),
     mode: 'onChange',
   });
+
+  useEffect(() => beginManualQueueScrollRestoration(), []);
 
   useEffect(() => {
     complaintsApi.getGrounds().then(setGrounds).catch(() => undefined);

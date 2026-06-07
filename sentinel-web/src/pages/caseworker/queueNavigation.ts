@@ -1,6 +1,12 @@
 const QUEUE_FOCUS_STORAGE_KEY = 'sentinel-queue-focus';
 const QUEUE_SEARCH_STORAGE_KEY = 'sentinel-queue-search';
 const STICKY_HEADER_OFFSET_PX = 96;
+type ScrollRestorationHost = Pick<History, 'scrollRestoration'>;
+
+const manualScrollRestorationHosts = new WeakMap<
+  ScrollRestorationHost,
+  { previous: ScrollRestoration; users: number }
+>();
 
 export type QueueReturnState = {
   queueSearch?: string;
@@ -14,6 +20,31 @@ export type ResolveQueueFocusOptions = {
   /** React Router navigation type — POP covers browser back/forward within the SPA. */
   navigationType: QueueNavigationType;
 };
+
+export function beginManualQueueScrollRestoration(historyLike: ScrollRestorationHost = window.history) {
+  const existing = manualScrollRestorationHosts.get(historyLike);
+  if (existing) {
+    existing.users += 1;
+    historyLike.scrollRestoration = 'manual';
+    return () => releaseManualQueueScrollRestoration(historyLike);
+  }
+
+  manualScrollRestorationHosts.set(historyLike, {
+    previous: historyLike.scrollRestoration,
+    users: 1,
+  });
+  historyLike.scrollRestoration = 'manual';
+  return () => releaseManualQueueScrollRestoration(historyLike);
+}
+
+function releaseManualQueueScrollRestoration(historyLike: ScrollRestorationHost) {
+  const current = manualScrollRestorationHosts.get(historyLike);
+  if (!current) return;
+  current.users -= 1;
+  if (current.users > 0) return;
+  historyLike.scrollRestoration = current.previous;
+  manualScrollRestorationHosts.delete(historyLike);
+}
 
 export function readQueueReturnState(state: unknown): QueueReturnState | null {
   if (!state || typeof state !== 'object') return null;

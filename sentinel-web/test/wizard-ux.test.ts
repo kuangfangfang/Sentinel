@@ -14,6 +14,9 @@ import {
   buildReferenceCodeText,
   buildComplaintSummarySections,
 } from '../src/pages/wizard/confirmationActions';
+import {
+  beginManualQueueScrollRestoration,
+} from '../src/pages/caseworker/queueNavigation';
 import type { ComplaintWriteDto, GroundDto } from '../src/types';
 
 function assert(condition: unknown, message: string): asserts condition {
@@ -130,6 +133,26 @@ const complaint: ComplaintWriteDto = {
   assert(rows.includes('Complaint details:Lodged:5 June 2026, 3:02 pm'), 'print summary includes the lodged time in Australia/Sydney time');
   assert(rows.includes('Who it is about:Respondents:Example Cafe'), 'print summary includes respondent names');
   assert(rows.includes('About you:Email:alex@example.com'), 'print summary includes complainant contact details');
+}
+
+{
+  const historyLike: { scrollRestoration: ScrollRestoration } = { scrollRestoration: 'auto' };
+  const currentScrollRestoration = () => historyLike.scrollRestoration;
+  const restore = beginManualQueueScrollRestoration(historyLike);
+  assert(currentScrollRestoration() === 'manual', 'queue return handling disables browser scroll restoration');
+  restore();
+  assert(currentScrollRestoration() === 'auto', 'queue return handling restores the previous scroll restoration mode');
+}
+
+{
+  const historyLike: { scrollRestoration: ScrollRestoration } = { scrollRestoration: 'auto' };
+  const currentScrollRestoration = () => historyLike.scrollRestoration;
+  const restoreFirst = beginManualQueueScrollRestoration(historyLike);
+  const restoreSecond = beginManualQueueScrollRestoration(historyLike);
+  restoreFirst();
+  assert(currentScrollRestoration() === 'manual', 'queue return handling stays manual while another page still needs it');
+  restoreSecond();
+  assert(currentScrollRestoration() === 'auto', 'queue return handling restores after the final manual scroll user leaves');
 }
 
 console.log('wizard UX checks passed');
