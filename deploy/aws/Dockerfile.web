@@ -8,7 +8,9 @@ COPY sentinel-web/package.json sentinel-web/package-lock.json ./
 RUN npm ci
 COPY sentinel-web/ .
 ARG VITE_API_BASE_URL=http://localhost:5187/api
+ARG VITE_SITE_URL=http://localhost:5173
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_SITE_URL=$VITE_SITE_URL
 RUN npm run build
 
 FROM nginx:1.27-alpine

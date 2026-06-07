@@ -74,12 +74,15 @@ Set in `.env`:
 
 ```env
 JWT_SIGNING_KEY=<paste-generated-key>
-FRONTEND_ORIGIN=https://main.xxxxx.amplifyapp.com
-VITE_API_BASE_URL=http://<EC2_PUBLIC_DNS>:8080/api
-SEED_BOOTSTRAP_CASEWORKER_EMAIL=admin@your-domain.example
+FRONTEND_ORIGIN=http://3.104.237.26
+VITE_API_BASE_URL=/api
+VITE_SITE_URL=http://3.104.237.26
+SEED_BOOTSTRAP_CASEWORKER_EMAIL=admin@example.com
 SEED_BOOTSTRAP_CASEWORKER_PASSWORD=<strong-password>
 SEED_BOOTSTRAP_CASEWORKER_FULL_NAME=Sentinel Admin
 ```
+
+Use your **Elastic IP** (or public IP) for `FRONTEND_ORIGIN` and `VITE_SITE_URL`. Use `http://` unless you terminate HTTPS on the instance. These must match what users type in the browser. `VITE_SITE_URL` is baked into SEO meta tags, `robots.txt`, and `sitemap.xml` when the `web` image builds.
 
 The API creates the bootstrap caseworker **once** on first startup if that email does not exist. Demo sample complaints are **not** seeded in Production.
 
@@ -214,6 +217,26 @@ Use `/health/ready` for load balancer or Docker health checks.
 | 401 after deploy | Token in sessionStorage; sign in again |
 | Data lost after restart | EBS volume not mounted to `./data`; verify `deploy/aws/data/` |
 | Mixed content blocked | API must be HTTPS when frontend is HTTPS |
+
+---
+
+## SEO and link previews (no custom domain)
+
+If you use an **Elastic IP** (e.g. `http://3.104.237.26`) without a domain:
+
+1. Set `VITE_SITE_URL=http://<your-elastic-ip>` in `deploy/aws/.env` (same host as `FRONTEND_ORIGIN`).
+2. Rebuild the **web** container so meta tags, `robots.txt`, and `sitemap.xml` pick up the URL:
+   ```bash
+   docker compose up -d --build web
+   ```
+3. After deploy, verify:
+   - `http://<ip>/robots.txt`
+   - `http://<ip>/sitemap.xml`
+   - View page source on `/` — `og:url` and `canonical` should use your IP.
+
+**Search indexing:** Submit `http://<ip>/sitemap.xml` in [Google Search Console](https://search.google.com/search-console) (URL prefix property). Indexing IP-only sites can be slower than domains; allow a few days.
+
+**Social previews:** Slack/Twitter/Facebook read `og:image` (`/og-image.png`). Some platforms cache previews — use their debuggers to refresh after deploy.
 
 ---
 

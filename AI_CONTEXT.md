@@ -142,6 +142,8 @@ CI: `.github/workflows/ci.yml` on push/PR to `main`.
 
 Manual EC2 deploy: `.github/workflows/deploy-ec2.yml` — **workflow_dispatch** only (Actions → Deploy EC2 → Run workflow). SSH runs `deploy/aws/deploy.sh`. Requires GitHub secrets `EC2_HOST`, `EC2_USER`, `EC2_SSH_KEY`, and `EC2_GIT_PAT` for private repos. CI on push does not trigger deploy.
 
+Production SEO: set `VITE_SITE_URL` (e.g. `http://3.104.237.26`) in `deploy/aws/.env` before building the `web` image. Vite injects canonical/OG tags and generates `robots.txt` + `sitemap.xml` at build time. `FRONTEND_ORIGIN` must match the browser URL (same scheme/host, no trailing slash).
+
 ## Testing Conventions
 
 ### Frontend

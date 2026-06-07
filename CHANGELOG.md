@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## 2026-06-07 — SEO and social previews for Elastic IP deployment
+
+### Added
+
+- Build-time SEO via `VITE_SITE_URL`: Open Graph / Twitter cards, JSON-LD, `robots.txt`, and `sitemap.xml` (Vite plugin in `sentinel-web/vite.config.ts`).
+- `sentinel-web/public/og-image.png` for link preview thumbnails.
+- nginx `/api/` reverse proxy in `deploy/aws/nginx.conf` for same-origin API on EC2.
+
+### Changed
+
+- `deploy/aws/.env.example` — Elastic IP `http://3.104.237.26`, `VITE_API_BASE_URL=/api`, `VITE_SITE_URL`.
+- `docker-compose.yml` / `Dockerfile.web` pass `VITE_SITE_URL` into the frontend build.
+
 ## 2026-06-06 — EC2 deploy: manual only (no auto on CI)
 
 ### Changed
