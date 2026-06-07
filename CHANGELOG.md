@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 2026-06-06 — EC2 deploy: manual only (no auto on CI)
+
+### Changed
+
+- `.github/workflows/deploy-ec2.yml` — removed `workflow_run` trigger; deploy only via **Run workflow** (avoids surprise full rebuilds on `t3.micro`).
+- README and `deploy/aws/README.md` — document manual deploy flow instead of post-CI automation.
+
 ## 2026-06-06 — Automated EC2 deploy via GitHub Actions
 
 ### Added

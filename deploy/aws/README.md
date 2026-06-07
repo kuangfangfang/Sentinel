@@ -217,13 +217,18 @@ Use `/health/ready` for load balancer or Docker health checks.
 
 ---
 
-## Automated deploy (GitHub Actions)
+## Manual deploy (GitHub Actions)
 
-After a one-time setup, every **successful CI run on `main`** triggers an SSH deploy to EC2 (`git pull` + `docker-compose up -d --build`). You can also run **Deploy EC2** manually from the Actions tab.
+Deploy is **manual only**. Pushing to `main` runs **CI** (tests + build) but does **not** redeploy EC2. When you are ready to update production:
+
+1. GitHub → **Actions** → **Deploy EC2** → **Run workflow** → **Run workflow**
+2. Or SSH to EC2 and run `bash ~/sentinel/deploy/aws/deploy.sh`
+
+On a `t3.micro` (1 GB RAM), avoid surprise full `docker-compose up -d --build` runs — they can OOM the instance. Deploy when you can monitor the box (add 2 GB swap if you have not already).
 
 ### One-time setup
 
-1. **EC2 security group — SSH:** GitHub Actions runners use changing public IPs. For automated deploy, open port **22** to **0.0.0.0/0** (rely on your `.pem` / deploy key; remove when not needed), or run deploys manually only.
+1. **EC2 security group — SSH:** GitHub Actions runners use changing public IPs. Open port **22** to **0.0.0.0/0** only while using Actions deploy (rely on your `.pem` / deploy key), or SSH from your IP and skip Actions entirely.
 
 2. **GitHub repository secrets** (Settings → Secrets and variables → Actions):
 
@@ -243,7 +248,7 @@ Get-Content "C:\Users\You\.ssh\sentinel.pem" -Raw
 
 Paste the entire output (including `-----BEGIN` / `-----END` lines) into `EC2_SSH_KEY`.
 
-3. **First deploy on the server** must already be done manually (`git clone`, `.env`, `data/`). Automation only **updates** an existing install.
+3. **First deploy on the server** must already be done manually (`git clone`, `.env`, `data/`). The workflow only **updates** an existing install.
 
 ### What runs on deploy
 
@@ -264,7 +269,7 @@ bash ~/sentinel/deploy/aws/deploy.sh
 | Workflow | When |
 |----------|------|
 | `CI` | Every push/PR to `main` — tests + frontend build |
-| `Deploy EC2` | After CI succeeds on `main`, or manual **Run workflow** |
+| `Deploy EC2` | Manual **Run workflow** only |
 
 ---
 

@@ -88,7 +88,7 @@ Required environment variables (Production):
 See **[deploy/aws/README.md](deploy/aws/README.md)** for step-by-step instructions:
 
 - **Recommended:** AWS Amplify (frontend) + EC2 `t3.micro` Docker (API + persistent EBS)
-- **Automated updates:** configure GitHub Actions secrets → push to `main` → CI passes → EC2 redeploys (see deploy guide § Automated deploy)
+- **Manual updates:** configure GitHub Actions secrets → Actions → **Deploy EC2** → **Run workflow** (see deploy guide § Manual deploy). CI still runs on push but does not redeploy EC2.
 - Health checks: `/health`, `/health/ready`
 - SQLite and uploaded evidence live on an EBS volume under `deploy/aws/data/`
 

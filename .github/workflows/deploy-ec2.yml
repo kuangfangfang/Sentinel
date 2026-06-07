@@ -1,13 +1,9 @@
-# Deploy to EC2 after CI passes on main, or manually via "Run workflow".
-# Requires GitHub repository secrets — see deploy/aws/README.md § Automated deploy.
+# Manual deploy to EC2 — run from GitHub Actions → Deploy EC2 → Run workflow.
+# Requires GitHub repository secrets — see deploy/aws/README.md § Manual deploy.
 
 name: Deploy EC2
 
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -16,9 +12,6 @@ concurrency:
 
 jobs:
   deploy:
-    if: >
-      github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Deploy over SSH

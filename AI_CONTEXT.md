@@ -140,7 +140,7 @@ Health checks: `/health`, `/health/ready` (used by Docker healthcheck and load b
 
 CI: `.github/workflows/ci.yml` on push/PR to `main`.
 
-Automated EC2 deploy: `.github/workflows/deploy-ec2.yml` runs after CI succeeds on `main` (SSH + `deploy/aws/deploy.sh`). Requires GitHub secrets `EC2_HOST`, `EC2_USER`, `EC2_SSH_KEY`, and `EC2_GIT_PAT` for private repos.
+Manual EC2 deploy: `.github/workflows/deploy-ec2.yml` — **workflow_dispatch** only (Actions → Deploy EC2 → Run workflow). SSH runs `deploy/aws/deploy.sh`. Requires GitHub secrets `EC2_HOST`, `EC2_USER`, `EC2_SSH_KEY`, and `EC2_GIT_PAT` for private repos. CI on push does not trigger deploy.
 
 ## Testing Conventions
 
