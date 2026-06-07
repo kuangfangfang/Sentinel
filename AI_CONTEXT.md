@@ -142,7 +142,21 @@ CI: `.github/workflows/ci.yml` on push/PR to `main`.
 
 Manual EC2 deploy: `.github/workflows/deploy-ec2.yml` — **workflow_dispatch** only (Actions → Deploy EC2 → Run workflow). SSH runs `deploy/aws/deploy.sh`. Requires GitHub secrets `EC2_HOST`, `EC2_USER`, `EC2_SSH_KEY`, and `EC2_GIT_PAT` for private repos. CI on push does not trigger deploy.
 
-Production SEO: set `VITE_SITE_URL` (e.g. `http://3.104.237.26`) in `deploy/aws/.env` before building the `web` image. Vite injects canonical/OG tags and generates `robots.txt` + `sitemap.xml` at build time. `FRONTEND_ORIGIN` must match the browser URL (same scheme/host, no trailing slash).
+Production SEO: set `VITE_SITE_URL` (e.g. `http://3.104.237.26`) in `deploy/aws/.env` before building the `web` image. Vite injects canonical/OG tags and generates `robots.txt` + `sitemap.xml` at build time. `FRONTEND_ORIGIN` must match the browser URL (same scheme/host, no trailing slash). Google Search Console verification file: `sentinel-web/public/google5e44fbdf4d4c2ad8.html` (keep in repo; served at site root).
+
+### Production host (June 2026)
+
+| Item | Value |
+|------|--------|
+| Public URL | `http://3.104.237.26` |
+| Platform | AWS EC2 `t3.micro` (Amazon Linux), Docker Compose |
+| Elastic IP | Yes — avoids IP change on stop/start |
+| Domain | None (HTTP only) |
+| Frontend build | `VITE_API_BASE_URL=/api`, nginx proxies `/api/` → `api:8080` |
+| Deploy | Manual — GitHub Actions **Deploy EC2** or SSH + `deploy/aws/deploy.sh` |
+| Lessons | Avoid full `--build` on 1 GB RAM; prefer `docker-compose up -d --build web` only |
+
+Launch / comms copy: `docs/LINKEDIN_LAUNCH.md`.
 
 ## Testing Conventions
 
@@ -200,6 +214,7 @@ The current working branch includes:
 - account page (profile + change password) and header user menu
 - collapsible caseworker status history (disclosure pattern)
 - AWS deployment pack and CI workflow
+- production hosting on AWS EC2 with Elastic IP, nginx `/api` proxy, SEO/Open Graph, and Google Search Console verification
 
 ## Caseworker UX notes
 

@@ -5,6 +5,16 @@ Public complaint wizard, anonymous lodgement, reference-code tracking, complaina
 
 **This is a demonstration project.** It is not affiliated with the Australian Human Rights Commission and does not provide legal advice.
 
+## Live demo (production)
+
+| | |
+|--|--|
+| **URL** | http://3.104.237.26 |
+| **Stack** | Docker on AWS EC2 `t3.micro` (SPA + API + SQLite on EBS) |
+| **Health** | http://3.104.237.26/api/health |
+
+Hosted on AWS Free Tier with an Elastic IP. HTTP only (no custom domain). Open Graph and sitemap configured for search and link previews.
+
 ## Stack
 
 | Layer | Technology |
@@ -75,8 +85,9 @@ Required environment variables (Production):
 | Variable | Example |
 |----------|---------|
 | `Jwt__SigningKey` | 64+ character random secret |
-| `Cors__AllowedOrigins__0` | `https://your-frontend.example.com` |
-| `VITE_API_BASE_URL` | `https://api.example.com/api` (build-time) |
+| `Cors__AllowedOrigins__0` / `FRONTEND_ORIGIN` | `http://3.104.237.26` (must match browser URL) |
+| `VITE_API_BASE_URL` | `/api` (same-origin via nginx on EC2) |
+| `VITE_SITE_URL` | `http://3.104.237.26` (build-time SEO / Open Graph) |
 | `ConnectionStrings__Sqlite` | `Data Source=/data/sentinel.db` |
 | `FileStorage__Root` | `/data/uploaded-evidence` |
 | `Seed__BootstrapCaseworkerEmail` | Admin caseworker email (created once) |
@@ -87,12 +98,16 @@ Required environment variables (Production):
 
 See **[deploy/aws/README.md](deploy/aws/README.md)** for step-by-step instructions:
 
-- **Recommended:** AWS Amplify (frontend) + EC2 `t3.micro` Docker (API + persistent EBS)
-- **Manual updates:** configure GitHub Actions secrets → Actions → **Deploy EC2** → **Run workflow** (see deploy guide § Manual deploy). CI still runs on push but does not redeploy EC2.
+- **Current setup:** single EC2 instance (nginx SPA + API via Docker Compose, Elastic IP, no custom domain)
+- **Alternative:** AWS Amplify (frontend) + EC2 Docker (API + persistent EBS)
+- **Manual updates:** GitHub Actions → **Deploy EC2** → **Run workflow**, or SSH + `deploy/aws/deploy.sh`. CI runs on push but does not auto-redeploy (avoids OOM on `t3.micro`).
+- **On EC2 use** `docker-compose` (hyphen), not `docker compose`, on Amazon Linux unless the Compose plugin is installed.
 - Health checks: `/health`, `/health/ready`
 - SQLite and uploaded evidence live on an EBS volume under `deploy/aws/data/`
+- SEO / LinkedIn previews: set `VITE_SITE_URL` before building the `web` image; see deploy guide § SEO and link previews
 
 ## Project docs
 
 - `AI_CONTEXT.md` — architecture and conventions for contributors
 - `CHANGELOG.md` — feature history
+- `docs/LINKEDIN_LAUNCH.md` — suggested LinkedIn launch copy and journey notes

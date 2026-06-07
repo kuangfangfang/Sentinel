@@ -217,6 +217,9 @@ Use `/health/ready` for load balancer or Docker health checks.
 | 401 after deploy | Token in sessionStorage; sign in again |
 | Data lost after restart | EBS volume not mounted to `./data`; verify `deploy/aws/data/` |
 | Mixed content blocked | API must be HTTPS when frontend is HTTPS |
+| Resources page blank | nginx missing `/api/` proxy, or `VITE_API_BASE_URL=/api` without proxy — rebuild `web` after updating `deploy/aws/nginx.conf` |
+| `docker compose` fails on EC2 | Use `docker-compose` (hyphen) on Amazon Linux unless Compose V2 plugin is installed |
+| `/api/*` returns HTML | Same as Resources blank — verify `curl http://<ip>/api/health` returns JSON not `<!doctype html>` |
 
 ---
 
@@ -227,16 +230,16 @@ If you use an **Elastic IP** (e.g. `http://3.104.237.26`) without a domain:
 1. Set `VITE_SITE_URL=http://<your-elastic-ip>` in `deploy/aws/.env` (same host as `FRONTEND_ORIGIN`).
 2. Rebuild the **web** container so meta tags, `robots.txt`, and `sitemap.xml` pick up the URL:
    ```bash
-   docker compose up -d --build web
+   docker-compose up -d --build web
    ```
 3. After deploy, verify:
    - `http://<ip>/robots.txt`
    - `http://<ip>/sitemap.xml`
    - View page source on `/` — `og:url` and `canonical` should use your IP.
 
-**Search indexing:** Submit `http://<ip>/sitemap.xml` in [Google Search Console](https://search.google.com/search-console) (URL prefix property). Indexing IP-only sites can be slower than domains; allow a few days.
+**Search indexing:** Submit `http://<ip>/sitemap.xml` in [Google Search Console](https://search.google.com/search-console) (URL prefix property). Use the **HTML file** verification method — file lives in `sentinel-web/public/google*.html` and is served at the site root. Indexing IP-only sites can be slower than domains; allow a few days. Check with `site:<ip>` on Google.
 
-**Social previews:** Slack/Twitter/Facebook read `og:image` (`/og-image.png`). Some platforms cache previews — use their debuggers to refresh after deploy.
+**Social previews:** Slack, LinkedIn, and Twitter read `og:title`, `og:description`, and `og:image` (`/og-image.png`). Refresh cached previews with [LinkedIn Post Inspector](https://www.linkedin.com/post-inspector/) after deploy. LinkedIn may label Type as "Article" in the inspector even when `og:type` is `website` — title, description, and image are what matter.
 
 ---
 

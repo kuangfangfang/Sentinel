@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## 2026-06-07 — Launch documentation and Search Console verification
+
+### Added
+
+- `docs/LINKEDIN_LAUNCH.md` — suggested LinkedIn posts, journey timeline, and thank-you notes for free-tier platforms.
+- `sentinel-web/public/google5e44fbdf4d4c2ad8.html` — Google Search Console ownership verification (HTML file method).
+
+### Changed
+
+- `README.md`, `AI_CONTEXT.md`, `deploy/aws/README.md` — live demo URL, Elastic IP env examples, `docker-compose` note, SEO/Search Console guidance.
+
 ## 2026-06-07 — SEO and social previews for Elastic IP deployment
 
 ### Added
