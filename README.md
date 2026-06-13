@@ -110,4 +110,3 @@ See **[deploy/aws/README.md](deploy/aws/README.md)** for step-by-step instructio
 
 - `AI_CONTEXT.md` — architecture and conventions for contributors
 - `CHANGELOG.md` — feature history
-- `docs/LINKEDIN_LAUNCH.md` — suggested LinkedIn launch copy and journey notes
