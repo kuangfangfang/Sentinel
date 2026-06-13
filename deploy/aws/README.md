@@ -38,8 +38,11 @@ Stay within one region (e.g. `ap-southeast-2` Sydney) to minimise latency for Au
 3. Storage: **20–30 GB gp3** EBS (same volume holds DB + uploads)
 4. Security group inbound:
    - **22** — SSH (your IP only)
-   - **8080** — API (temporary; lock down after adding HTTPS reverse proxy)
-   - **80 / 443** — if serving frontend from same host
+   - **80 / 443** — web traffic through nginx
+
+Do **not** open `8080` to the internet for the default Docker Compose deployment.
+The API is bound to `127.0.0.1:8080` on the host and is reached publicly through
+nginx at `/api/`.
 
 ### 2. Install Docker on the instance
 
@@ -100,7 +103,10 @@ curl http://localhost:8080/health
 curl http://localhost:8080/health/ready
 ```
 
-Point Amplify `VITE_API_BASE_URL` at `http://<EC2_PUBLIC_IP>:8080/api` for first test, then move to HTTPS (see below).
+For an Amplify frontend, put a public HTTPS reverse proxy in front of the API
+and point Amplify `VITE_API_BASE_URL` at that proxy, for example
+`https://api.demo.example.com/api`. The default Compose file intentionally does
+not expose API port `8080` publicly.
 
 ### 5. Start API + web on same EC2 (optional)
 
@@ -108,7 +114,8 @@ Point Amplify `VITE_API_BASE_URL` at `http://<EC2_PUBLIC_IP>:8080/api` for first
 docker compose up -d --build
 ```
 
-Open `http://<EC2_PUBLIC_IP>/` for the SPA and port 8080 for API.
+Open `http://<EC2_PUBLIC_IP>/` for the SPA. API requests go through the same
+origin under `/api/`; direct public access to port `8080` stays closed.
 
 ---
 
@@ -217,6 +224,7 @@ Use `/health/ready` for load balancer or Docker health checks.
 | 401 after deploy | Token in sessionStorage; sign in again |
 | Data lost after restart | EBS volume not mounted to `./data`; verify `deploy/aws/data/` |
 | Mixed content blocked | API must be HTTPS when frontend is HTTPS |
+| `http://<ip>:8080` is unreachable | Expected for the hardened default; use `http://<ip>/api/...` through nginx |
 | Resources page blank | nginx missing `/api/` proxy, or `VITE_API_BASE_URL=/api` without proxy — rebuild `web` after updating `deploy/aws/nginx.conf` |
 | `docker compose` fails on EC2 | Use `docker-compose` (hyphen) on Amazon Linux unless Compose V2 plugin is installed |
 | `/api/*` returns HTML | Same as Resources blank — verify `curl http://<ip>/api/health` returns JSON not `<!doctype html>` |
