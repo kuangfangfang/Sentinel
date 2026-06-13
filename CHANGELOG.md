@@ -4,7 +4,6 @@
 
 ### Added
 
-- `docs/LINKEDIN_LAUNCH.md` — suggested LinkedIn posts, journey timeline, and thank-you notes for free-tier platforms.
 - `sentinel-web/public/google5e44fbdf4d4c2ad8.html` — Google Search Console ownership verification (HTML file method).
 
 ### Changed
